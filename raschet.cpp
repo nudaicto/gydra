@@ -11,11 +11,11 @@ int h0 = 150;
 double dx = 2.5;
 double dy = 2.5;
 int h1 = 100;
-int h2 = 90;
+int h2 =90;
 std::vector<double> x(1);
 std::vector<double> y(1);
 
-int i = 0;
+double i = 0;
 
 while (i<l) {
     i=i+dx;
@@ -96,7 +96,7 @@ for (int iter = 0; iter<max_iter; iter++) {
     }
 }
 
-std::ofstream file("/mnt/d/university/gydra/data.txt");
+std::ofstream file("data.txt");
 
 if (!file.is_open()) {
     std::cerr << "Ошибка открытия файла!" << std::endl;
@@ -104,6 +104,18 @@ if (!file.is_open()) {
 }
 
 file << std::fixed << std::setprecision(5);
+
+for (int i =0; i<N; i++) {
+    file << x[i] << " ";
+}
+
+file << std::endl; 
+
+for (int i =0; i<M; i++) {
+    file << y[i] << " ";
+}
+
+file << std::endl; 
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
