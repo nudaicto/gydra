@@ -33,9 +33,12 @@ int M = y.size();
 
 std::vector<std::vector<double>> h(M, std::vector<double>(N, (h1+h2)/2));
 
+std::vector<std::vector<std::pair<double, double>>> v(M, std::vector<std::pair<double, double>>(N, std::pair<double,double>(0,0)));
+//будем считать, что v[][].first = v_y, а v[][].second = v_x;
+
 /*for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        std::cout << h[i][j] << " ";
+        std::cout << v[i][j].first << " ";
     }
     std::cout << std::endl;  
 }*/
@@ -120,6 +123,49 @@ file << std::endl;
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
         file << h[i][j] << " ";
+    }
+    file << std::endl;  
+}
+
+double k = 1.0;
+
+//теперь нам нужно посчитать поле скоростей. 
+
+//найдем значения для v_x
+//для внутр точек + левая грань
+for(int i = 0; i<M; i++) {
+    for (int j = 0; j<N-1; j++) { 
+        v[i][j].second = (h[i][j+1] - h[i][j])/dx;
+    }
+}
+//для правой границы
+for (int i = 0; i<M; i++) { 
+        v[i][N-1].second = (h[i][N-1] - h[i][N-2])/dx;
+}
+
+//найдем значения для v_y
+//для внутр точек
+for(int i = 1; i<M-1; i++) {
+    for (int j = 0; j<N; j++) { 
+        v[i][j].first = (h[i+1][j] - h[i][j])/dy;
+    }
+}
+//для нижней и верхней граней
+for (int j = 0; j<N; j++) { 
+        v[0][j].first = 0;
+        v[M-1][j].first = 0;
+}
+
+for(int i = 0; i<M; i++ ) {
+    for (int j = 0; j<N; j++) {
+        file << -k*v[i][j].first << " ";
+    }
+    file << std::endl;  
+}
+
+for(int i = 0; i<M; i++ ) {
+    for (int j = 0; j<N; j++) {
+        file << -k*v[i][j].second << " ";
     }
     file << std::endl;  
 }
