@@ -5,9 +5,40 @@
 #include <iomanip>
 #include <fstream>
 
+double y_top(double x) {
+    return 150.0; //возвращает значение y
+}
+double y_bottom(double x) {
+    return 0; //возвращает значение y
+}
+double x_right(double y) {
+    return 100; //возвращает значение x
+}
+double x_left(double y) {
+    return 0; //возвращает значение x
+}
+
+class CPoint {
+private:
+
+public:
+    std::pair<double,double> y_x;
+    double h;
+    std::pair<double,double> v;
+    int alpha;
+    std::string board; 
+
+    CPoint(std::pair<double,double> _y_x = {0,0}, 
+        double _h = 0, 
+        std::pair<double,double> _v = {0, 0}, 
+        int _alpha = 1, 
+        std::string _board = "no") 
+        : y_x(_y_x), h(_h), v(_v), alpha(_alpha), board(_board) {}
+};
+
 int main() {
-int l = 100;
-int h0 = 150;
+int x_max = 100;
+int y_max = 150;
 double dx = 2.5;
 double dy = 2.5;
 int h1 = 100;
@@ -17,13 +48,13 @@ std::vector<double> y(1);
 
 double i = 0;
 
-while (i<l) {
+while (i<x_max) {
     i=i+dx;
     x.push_back(i);
 }
 
 i = 0;
-while (i<h0) {
+while (i<y_max) {
     i=i+dy;
     y.push_back(i);
 }
@@ -31,8 +62,15 @@ while (i<h0) {
 int N = x.size();
 int M = y.size();
 
-std::vector<std::vector<double>> h(M, std::vector<double>(N, (h1+h2)/2));
+std::vector<std::vector<CPoint>> pole(M, std::vector<CPoint>(N, CPoint()));
 
+for(int i = 0; i<M; i++) {
+    for(int j = 0; j<N; j++) {
+        pole[i][j].h = (h1+h2)/2;
+    }
+}
+
+std::vector<std::vector<double>> h(M, std::vector<double>(N, (h1+h2)/2));
 std::vector<std::vector<std::pair<double, double>>> v(M, std::vector<std::pair<double, double>>(N, std::pair<double,double>(0,0)));
 //будем считать, что v[][].first = v_y, а v[][].second = v_x;
 
@@ -46,8 +84,8 @@ std::vector<std::vector<std::pair<double, double>>> v(M, std::vector<std::pair<d
 //граничные условия на x=0 и x=l
 
 for (int i = 0; i<M; i++) {
-    h[i][0] = h1;
-    h[i][N-1] = h2;
+    pole[i][0].h = h1;
+    pole[i][N-1].h = h2;
 }
 
 //обращаться надо h[y][x]
@@ -64,26 +102,26 @@ for (int iter = 0; iter<max_iter; iter++) {
     //std:: cout << "1" << std::endl;
     //пересчет дна 
     for (int j = 1; j<N-1; j++) {
-        h_old = h[0][j];
-        h[0][j] = ((h[0][j-1]+h[0][j+1])*dy/dx + 2*h[1][j])/(2*(dy/dx) + 2);
-        e0 = std::max(e0, std::abs(h_old - h[0][j]));
+        h_old = pole[0][j].h;
+        pole[0][j].h = ((pole[0][j-1].h+pole[0][j+1].h)*dy/dx + 2*pole[1][j].h)/(2*(dy/dx) + 2);
+        e0 = std::max(e0, std::abs(h_old - pole[0][j].h));
     }
     //std:: cout << "2" << std::endl;
     //пересчет основных точек
     for(int i = 1; i<M-1; i++) {
         for(int j = N-2; j>=1; j--) {
-            h_old = h[i][j];
-            h[i][j] = ((h[i][j-1]+h[i][j+1])*dy/dx + h[i-1][j] + h[i+1][j])/(2*(dy/dx) + 2);
-            e0 = std::max(e0, std::abs(h_old - h[i][j]));
+            h_old = pole[i][j].h;
+            pole[i][j].h = ((pole[i][j-1].h+pole[i][j+1].h)*dy/dx + pole[i-1][j].h + pole[i+1][j].h)/(2*(dy/dx) + 2);
+            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
         }
     }
     //std:: cout << "3" << std::endl;
 
     //пересчет крышки
     for (int j = 1; j<N-1; j++) {
-        h_old = h[M-1][j];
-        h[M-1][j] = ((h[M-1][j-1]+h[M-1][j+1])*dy/dx + 2*h[M-2][j])/(2*(dy/dx) + 2);
-        e0 = std::max(e0, std::abs(h_old - h[M-1][j]));
+        h_old = pole[M-1][j].h;
+        pole[M-1][j].h = ((pole[M-1][j-1].h+pole[M-1][j+1].h)*dy/dx + 2*pole[M-2][j].h)/(2*(dy/dx) + 2);
+        e0 = std::max(e0, std::abs(h_old - pole[M-1][j].h));
     }
     //std:: cout << "4" << std::endl;
     //проверка сходимости
@@ -122,7 +160,7 @@ file << std::endl;
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file << h[i][j] << " ";
+        file << pole[i][j].h << " ";
     }
     file << std::endl;  
 }
@@ -135,37 +173,37 @@ double k = 1.0;
 //для внутр точек + левая грань
 for(int i = 0; i<M; i++) {
     for (int j = 0; j<N-1; j++) { 
-        v[i][j].second = (h[i][j+1] - h[i][j])/dx;
+        pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;
     }
 }
 //для правой границы
 for (int i = 0; i<M; i++) { 
-        v[i][N-1].second = (h[i][N-1] - h[i][N-2])/dx;
+        pole[i][N-1].v.second = (pole[i][N-1].h - pole[i][N-2].h)/dx;
 }
 
 //найдем значения для v_y
 //для внутр точек
 for(int i = 1; i<M-1; i++) {
     for (int j = 0; j<N; j++) { 
-        v[i][j].first = (h[i+1][j] - h[i][j])/dy;
+        pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;
     }
 }
 //для нижней и верхней граней
 for (int j = 0; j<N; j++) { 
-        v[0][j].first = 0;
-        v[M-1][j].first = 0;
+        pole[0][j].v.first = 0;
+        pole[M-1][j].v.first = 0;
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file << -k*v[i][j].first << " ";
+        file << -k*pole[i][j].v.first << " ";
     }
     file << std::endl;  
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file << -k*v[i][j].second << " ";
+        file << -k*pole[i][j].v.second << " ";
     }
     file << std::endl;  
 }
