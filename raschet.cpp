@@ -6,10 +6,10 @@
 #include <fstream>
 
 double f_top(double x) {
-    return 150; //возвращает значение y
+    return -0.3*x+150; //возвращает значение y
 }
 double f_bottom(double x) {
-    return 0.2*x; //возвращает значение y
+    return 0.3*x; //возвращает значение y
 }
 double f_right(double y) {
     return 100; //возвращает значение x
@@ -19,8 +19,9 @@ double f_left(double y) {
 }
 
 double f_k(double y, double x) {
-    if (y<0.3*x) {return 2;}
-    else {return 1;}
+    if (y<0.5*x) {return 2;}
+    if (((x-40)*(x-40)+(y-80)*(y-80))<=160) {return 2;}
+    return 1;
 }
 
 class CPoint {
@@ -172,7 +173,6 @@ if (pole[M-1][0].alpha == 4 && pole[M-2][1].alpha == 1) {pole[M-1][0].board = "u
 if (pole[M-1][N-1].alpha == 4 && pole[M-2][N-2].alpha == 1) {pole[M-1][N-1].board = "ugol_2";}
 if (pole[0][N-1].alpha == 4 && pole[1][N-2].alpha == 1) {pole[0][N-1].board = "ugol_3";}
 
-
 for (int i = 0; i<M; i++) {
     for (int j = 1; j<N-1; j++) {
         if (pole[i][j].board!="no") {
@@ -199,15 +199,35 @@ for (int iter = 0; iter<max_iter; iter++) {
         for (int j = 1; j<N-1; j++) {
             if (pole[i][j].alpha == 4 && pole[i][j].board == "no") {continue;}
             h_old = pole[i][j].h;
-            if (pole[i][j].alpha == 1 && pole[i][j].board == "no") {pole[i][j].h = ((pole[i][j-1].h+pole[i][j+1].h)*dy/dx + pole[i-1][j].h + pole[i+1][j].h)/(2*(dy/dx) + 2);}
+            if (pole[i][j].alpha == 1 && pole[i][j].board == "no") {
+                double dx2 = dx * dx;
+                double dy2 = dy * dy;
 
-            if (pole[i][j].board == "h_bottom") {pole[i][j].h = ((pole[i][j-1].h+pole[i][j+1].h)*dy/dx + 2*pole[i+1][j].h)/(2*(dy/dx) + 2);}
+                double k_ij = pole[i][j].k;
 
-            if (pole[i][j].board == "h_top") {pole[i][j].h = ((pole[i][j-1].h+pole[i][j+1].h)*dy/dx + 2*pole[i-1][j].h)/(2*(dy/dx) + 2);}
+                double k_left   = k_ij + pole[i][j-1].k;
+                double k_right  = k_ij + pole[i][j+1].k;
+                double k_down   = k_ij + pole[i-1][j].k;
+                double k_up     = k_ij + pole[i+1][j].k;
 
-            if (pole[i][j].board == "v_right") {pole[i][j].h = 2*pole[i][j-1].h*dy/dx + pole[i-1][j].h + pole[i+1][j].h;}
+                double numerator = (k_left   / dx2) * pole[i][j-1].h +
+                   (k_right  / dx2) * pole[i][j+1].h +
+                   (k_down   / dy2) * pole[i-1][j].h +
+                   (k_up     / dy2) * pole[i+1][j].h;
 
-            if (pole[i][j].board == "v_left") {pole[i][j].h = 2*pole[i][j+1].h*dy/dx + pole[i-1][j].h + pole[i+1][j].h;}
+                double denominator = k_left / dx2 + k_right / dx2 + k_down / dy2 + k_up / dy2;
+
+                pole[i][j].h = numerator / denominator;
+                
+            }
+
+            if (pole[i][j].board == "h_bottom") {pole[i][j].h = pole[i+1][j].h;}
+
+            if (pole[i][j].board == "h_top") {pole[i][j].h = pole[i-1][j].h;}
+
+            if (pole[i][j].board == "v_right") {pole[i][j].h = pole[i][j-1].h;}
+
+            if (pole[i][j].board == "v_left") {pole[i][j].h = pole[i][j+1].h;}
 
             if (pole[i][j].board == "ugol_1") {pole[i][j].h = (pole[i-1][j].h + pole[i][j+1].h)/2;}
             if (pole[i][j].board == "ugol_2") {pole[i][j].h = (pole[i-1][j].h + pole[i][j-1].h)/2;}
@@ -217,31 +237,6 @@ for (int iter = 0; iter<max_iter; iter++) {
             e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
         }
     }
-
-    /*
-    //пересчет дна 
-    for (int j = 1; j<N-1; j++) {
-        h_old = pole[0][j].h;
-        pole[0][j].h = ((pole[0][j-1].h+pole[0][j+1].h)*dy/dx + 2*pole[1][j].h)/(2*(dy/dx) + 2);
-        e0 = std::max(e0, std::abs(h_old - pole[0][j].h));
-    }
-
-    //пересчет основных точек
-    for(int i = 1; i<M-1; i++) {
-        for(int j = N-2; j>=1; j--) {
-            h_old = pole[i][j].h;
-            pole[i][j].h = ((pole[i][j-1].h+pole[i][j+1].h)*dy/dx + pole[i-1][j].h + pole[i+1][j].h)/(2*(dy/dx) + 2);
-            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
-        }
-    }
-
-    //пересчет крышки
-    for (int j = 1; j<N-1; j++) {
-        h_old = pole[M-1][j].h;
-        pole[M-1][j].h = ((pole[M-1][j-1].h+pole[M-1][j+1].h)*dy/dx + 2*pole[M-2][j].h)/(2*(dy/dx) + 2);
-        e0 = std::max(e0, std::abs(h_old - pole[M-1][j].h));
-    }
-        */
 
     if (e0 < e) {
         std:: cout << "Сошлось за " << iter + 1 << " итераций" << std::endl;
@@ -281,7 +276,7 @@ file1 << std::endl;
 
 for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        file1 << pole[i][j].k << " ";
+        file1 << pole[i][j].h << " ";
     }
     file1 << std::endl;  
 }
@@ -289,56 +284,48 @@ for(int i = M-1; i>-1; i-- ) {
 double k = 1.0;
 
 //теперь нам нужно посчитать поле скоростей. 
-//std::cout << M << " " << N << std::endl;
-//найдем значения для v_x
+
 for (int i = 0; i<M; i++) {
     for(int j = 0; j<N; j++) {
         if (pole[i][j].board == "v_right" || pole[i][j].board == "ugol_2" || pole[i][j].board == "ugol_3") {
-            //std::cout << 1 << " " << i << " " << j << std::endl;
             if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
             if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j].h - pole[i][j-1].h)/dx;}
         }
         
         else if (pole[i][j].board == "v_left" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_4") {
-            //std::cout << 2 << " " << i << " " << j << std::endl;
             if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
             if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;}
         }
         else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
-            //std::cout << 3 << " " << i << " " << j << std::endl;
             pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;
         }
         
         if (pole[i][j].board == "h_bottom" || pole[i][j].board == "ugol_3" || pole[i][j].board == "ugol_4") {
-            //std::cout << 4 << " " << i << " " << j << std::endl;
             if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
             if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;}
         }
         
         else if (pole[i][j].board == "h_top" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_2") {
-            //std::cout << 5 << " " << i << " " << j << std::endl;
             if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
             if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i][j].h - pole[i-1][j].h)/dy;}
         }
         
         else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
-            //std::cout << 6 << " " << i << " " << j << std::endl;
             pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;
         }
-        //std::cout << 7 << " " << i << " " << j << std::endl;
     }
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file1 << -k*pole[i][j].v.first << " ";
+        file1 << -pole[i][j].k*pole[i][j].v.first << " ";
     }
     file1 << std::endl;  
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file1 << -k*pole[i][j].v.second << " ";
+        file1 << -pole[i][j].k*pole[i][j].v.second << " ";
     }
     file1 << std::endl;  
 }
@@ -349,14 +336,14 @@ file << "y,x,h,alpha,board,type,vy,vx\n";
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-         file << pole[i][j].y_x.first << ","     // y
-              << pole[i][j].y_x.second << ","    // x
-              << pole[i][j].h << ","             // напор
-              << pole[i][j].alpha << ","         // alpha
-              << pole[i][j].board << ","         // board
-              << pole[i][j].type << ","          // type
-              << -k * pole[i][j].v.first << ","  // vy
-              << -k * pole[i][j].v.second << std::endl; // vx
+         file << pole[i][j].y_x.first << ","    
+              << pole[i][j].y_x.second << ","    
+              << pole[i][j].h << ","            
+              << pole[i][j].alpha << ","         
+              << pole[i][j].board << ","     
+              << pole[i][j].type << ","         
+              << -k * pole[i][j].v.first << "," 
+              << -k * pole[i][j].v.second << std::endl;
     } 
 }
 
@@ -367,11 +354,12 @@ int x_j = 5;
 double Q = 0;
 
 for (int i = 0; i<M; i++) {
-    Q+=-k*pole[i][x_j].v.second*dy;
+    Q+=-pole[i][x_j].k*pole[i][x_j].v.second*dy;
 }
 
-std::cout << "Расход воды через вертикальную стенку x = " << pole[0][x_j].y_x.second << " Q = " << Q << "m^3/s" << std::endl;
+std::cout << "Расход воды через вертикальную стенку x = " << pole[0][x_j].y_x.second << " Q = " << Q << " " << "m^3/s" << std::endl;
 
 return 0;
+
 
 }
