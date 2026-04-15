@@ -6,7 +6,7 @@
 #include <fstream>
 
 double f_top(double x) {
-    return -0.2*x+150.0; //возвращает значение y
+    return 150; //возвращает значение y
 }
 double f_bottom(double x) {
     return 0.2*x; //возвращает значение y
@@ -18,6 +18,11 @@ double f_left(double y) {
     return 0; //возвращает значение x
 }
 
+double f_k(double y, double x) {
+    if (y<0.3*x) {return 2;}
+    else {return 1;}
+}
+
 class CPoint {
 private:
 
@@ -26,16 +31,18 @@ public:
     double h;
     std::pair<double,double> v; //будем считать, что v.first = v_y, а v.second = v_x;
     int alpha;
+    int k;
     std::string board;
     std::string type;
 
     CPoint(std::pair<double,double> _y_x = {0,0}, 
         double _h = 0, 
         std::pair<double,double> _v = {0, 0}, 
-        int _alpha = 1, 
+        int _alpha = 1,
+        int _k = 1, 
         std::string _board = "no",
         std::string _type = "fixed") 
-        : y_x(_y_x), h(_h), v(_v), alpha(_alpha), board(_board), type(_type) {}
+        : y_x(_y_x), h(_h), v(_v), alpha(_alpha), k(_k), board(_board), type(_type) {}
 
 };
 
@@ -71,12 +78,13 @@ for(int i = 0; i<M; i++) {
     for(int j = 0; j<N; j++) {
         pole[i][j].h = (h1+h2)/2;
         pole[i][j].y_x = {y[i], x[j]};
-        //определяем показатель algpa для каждой точки
+        //определяем показатель alpha для каждой точки
         if ((pole[i][j].y_x.second > f_left(pole[i][j].y_x.first)) && (pole[i][j].y_x.second < f_right(pole[i][j].y_x.first))
         && (pole[i][j].y_x.first > f_bottom(pole[i][j].y_x.second)) && (pole[i][j].y_x.first < f_top(pole[i][j].y_x.second))) {
             pole[i][j].alpha = 1;
         }
         else {pole[i][j].alpha = 4;}
+        pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second);
     }
 }
 
@@ -165,6 +173,13 @@ if (pole[M-1][N-1].alpha == 4 && pole[M-2][N-2].alpha == 1) {pole[M-1][N-1].boar
 if (pole[0][N-1].alpha == 4 && pole[1][N-2].alpha == 1) {pole[0][N-1].board = "ugol_3";}
 
 
+for (int i = 0; i<M; i++) {
+    for (int j = 1; j<N-1; j++) {
+        if (pole[i][j].board!="no") {
+            pole[i][j].type = "zero_gradient";
+        } 
+    }
+}
 //граничные условия на x=0 и x=l
 
 for (int i = 0; i<M; i++) {
@@ -180,7 +195,6 @@ int max_iter = 10000;
 
 for (int iter = 0; iter<max_iter; iter++) {
     e0 = 0;
-
     for (int i = 0; i<M; i++) {
         for (int j = 1; j<N-1; j++) {
             if (pole[i][j].alpha == 4 && pole[i][j].board == "no") {continue;}
@@ -235,7 +249,7 @@ for (int iter = 0; iter<max_iter; iter++) {
     }
 }
 
-std::ofstream file("data.txt");
+std::ofstream file("result.csv");
 
 if (!file.is_open()) {
     std::cerr << "Ошибка открытия файла!" << std::endl;
@@ -244,71 +258,119 @@ if (!file.is_open()) {
 
 file << std::fixed << std::setprecision(5);
 
-for (int i =0; i<N; i++) {
-    file << x[i] << " ";
+std::ofstream file1("data.txt");
+
+if (!file1.is_open()) {
+    std::cerr << "Ошибка открытия файла!" << std::endl;
+    return 1;
 }
 
-file << std::endl; 
+file1 << std::fixed << std::setprecision(5);
+
+for (int i =0; i<N; i++) {
+    file1 << x[i] << " ";
+}
+
+file1 << std::endl; 
 
 for (int i =0; i<M; i++) {
-    file << y[i] << " ";
+    file1 << y[i] << " ";
 }
 
-file << std::endl; 
+file1 << std::endl; 
 
-for(int i = 0; i<M; i++ ) {
+for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        //std::cout << pole[i][j].board << " ";
-        file << pole[i][j].h << " ";
+        file1 << pole[i][j].k << " ";
     }
-    //std::cout << std::endl;
-    file << std::endl;  
+    file1 << std::endl;  
 }
 
 double k = 1.0;
 
 //теперь нам нужно посчитать поле скоростей. 
-
+//std::cout << M << " " << N << std::endl;
 //найдем значения для v_x
-//для внутр точек + левая грань
-for(int i = 0; i<M; i++) {
-    for (int j = 0; j<N-1; j++) { 
-        pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;
+for (int i = 0; i<M; i++) {
+    for(int j = 0; j<N; j++) {
+        if (pole[i][j].board == "v_right" || pole[i][j].board == "ugol_2" || pole[i][j].board == "ugol_3") {
+            //std::cout << 1 << " " << i << " " << j << std::endl;
+            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
+            if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j].h - pole[i][j-1].h)/dx;}
+        }
+        
+        else if (pole[i][j].board == "v_left" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_4") {
+            //std::cout << 2 << " " << i << " " << j << std::endl;
+            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
+            if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;}
+        }
+        else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
+            //std::cout << 3 << " " << i << " " << j << std::endl;
+            pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;
+        }
+        
+        if (pole[i][j].board == "h_bottom" || pole[i][j].board == "ugol_3" || pole[i][j].board == "ugol_4") {
+            //std::cout << 4 << " " << i << " " << j << std::endl;
+            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
+            if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;}
+        }
+        
+        else if (pole[i][j].board == "h_top" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_2") {
+            //std::cout << 5 << " " << i << " " << j << std::endl;
+            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
+            if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i][j].h - pole[i-1][j].h)/dy;}
+        }
+        
+        else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
+            //std::cout << 6 << " " << i << " " << j << std::endl;
+            pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;
+        }
+        //std::cout << 7 << " " << i << " " << j << std::endl;
     }
-}
-//для правой границы
-for (int i = 0; i<M; i++) { 
-        pole[i][N-1].v.second = (pole[i][N-1].h - pole[i][N-2].h)/dx;
-}
-
-//найдем значения для v_y
-//для внутр точек
-for(int i = 1; i<M-1; i++) {
-    for (int j = 0; j<N; j++) { 
-        pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;
-    }
-}
-//для нижней и верхней граней
-for (int j = 0; j<N; j++) { 
-        pole[0][j].v.first = 0;
-        pole[M-1][j].v.first = 0;
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file << -k*pole[i][j].v.first << " ";
+        file1 << -k*pole[i][j].v.first << " ";
     }
-    file << std::endl;  
+    file1 << std::endl;  
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file << -k*pole[i][j].v.second << " ";
+        file1 << -k*pole[i][j].v.second << " ";
     }
-    file << std::endl;  
+    file1 << std::endl;  
+}
+
+file1.close();
+
+file << "y,x,h,alpha,board,type,vy,vx\n";
+
+for(int i = 0; i<M; i++ ) {
+    for (int j = 0; j<N; j++) {
+         file << pole[i][j].y_x.first << ","     // y
+              << pole[i][j].y_x.second << ","    // x
+              << pole[i][j].h << ","             // напор
+              << pole[i][j].alpha << ","         // alpha
+              << pole[i][j].board << ","         // board
+              << pole[i][j].type << ","          // type
+              << -k * pole[i][j].v.first << ","  // vy
+              << -k * pole[i][j].v.second << std::endl; // vx
+    } 
 }
 
 file.close();
+
+//считаем расход через вертикальную стенку
+int x_j = 5;
+double Q = 0;
+
+for (int i = 0; i<M; i++) {
+    Q+=-k*pole[i][x_j].v.second*dy;
+}
+
+std::cout << "Расход воды через вертикальную стенку x = " << pole[0][x_j].y_x.second << " Q = " << Q << "m^3/s" << std::endl;
 
 return 0;
 
