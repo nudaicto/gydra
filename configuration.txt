@@ -1,0 +1,28 @@
+f_top
+form type line k -0.3 b 150 start 0 finish 150
+u type zero_gradient
+form type circle x0 40 y0 80 R 160
+u type fixed value 100
+
+f_bottom
+form type line k 0.2 b 0 start 0 finish 150
+u type zero_gradient
+
+f_right
+form type line k 0 b 100 start 0 finish 100
+u type fixed value 90
+
+f_left
+form type line k 0 b 0 start 0 finish 100
+u type fixed value 100
+
+f_k
+alpha 1
+type line k 0.5 b 0 start 0 finish 150 alpha 2
+type circle x0 40 y0 80 R 160 alpha 2
+
+
+x_max 100
+y_max 150
+dx 0.75
+dy 0.75
