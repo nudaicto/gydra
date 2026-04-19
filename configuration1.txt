@@ -1,17 +1,17 @@
 f_top
-form type line k -0.3 b 150 start 0 finish 100
+form type line k -0.3 b 150 start 0 finish 150
 u type zero_gradient
 
 f_bottom
-form type line k 0.3 b 0 start 0 finish 100
+form type line k 0.2 b 0 start 0 finish 150
 u type zero_gradient
 
 f_right
-form type line k 0 b 100 start 0 finish 150
+form type line k 0 b 100 start 0 finish 100
 u type fixed value 100
 
 f_left
-form type line k 0 b 0 start 0 finish 150
+form type line k 0 b 0 start 0 finish 100
 u type fixed value 90
 
 f_k

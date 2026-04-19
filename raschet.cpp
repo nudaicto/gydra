@@ -4,18 +4,72 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <variant>
+#include "configuration.h"
 
-bool f_top(double y, double x) {
-    return y < -0.3*x+150; //возвращает значение y
+bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+    for (auto& item: vec) {
+        bool result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    return y < obj.k*x+obj.b;
+                }
+                else {return false;}
+            }
+            else {return false;}
+        }, item);
+        if (result) {return true;}
+    }
+    return false;
 }
-bool f_bottom(double y, double x) {
-    return y > 0.3*x; //возвращает значение y
+bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+    for (auto& item: vec) {
+        bool result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    return y > obj.k*x+obj.b;
+                }
+                else {return false;}
+            }
+            else {return false;}
+        }, item);
+        if (result) {return true;}
+    }
+    return false;
 }
-bool f_right(double y, double x) {
-    return x < 100; //возвращает значение x
+bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+    for (auto& item: vec) {
+        bool result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (y>=obj.start && y<=obj.finish) {
+                    return x < obj.k*y+obj.b;
+                }
+                else {return false;}
+            }
+            else {return false;}
+        }, item);
+        if (result) {return true;}
+    }
+    return false;
 }
-bool f_left(double y, double x) {
-    return x > 0; //возвращает значение x
+bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+    for (auto& item: vec) {
+        bool result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (y>=obj.start && y<=obj.finish) {
+                    return x > obj.k*y+obj.b;
+                }
+                else {return false;}
+            }
+            else {return false;}
+        }, item);
+        if (result) {return true;}
+    }
+    return false;
 }
 
 double f_k(double y, double x) {
@@ -25,8 +79,6 @@ double f_k(double y, double x) {
 }
 
 class CPoint {
-private:
-
 public:
     std::pair<double,double> y_x; 
     double h;
@@ -77,19 +129,57 @@ int M = y.size();
 
 std::vector<std::vector<CPoint>> pole(M, std::vector<CPoint>(N, CPoint()));
 
+//получаем информацию о границах из файла
+std::ifstream out;
+std::string filename = "configuration.txt";
+
+std::vector<std::variant<CLine, CCircle>> top;
+std::vector<std::variant<CLine, CCircle>> bottom;
+std::vector<std::variant<CLine, CCircle>> right;
+std::vector<std::variant<CLine, CCircle>> left;
+
+std::string line;
+std::ifstream file2(filename);
+if (file2.is_open()) {
+    while (std::getline(file2, line)) {
+        if (line=="f_top") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, top);
+            }
+        }
+        if (line=="f_bottom") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, bottom);
+            }
+        }
+        if (line=="f_right") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, right);
+            }
+        }
+        if (line=="f_left") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, left);
+            }
+        }
+    }
+}
+
 for(int i = 0; i<M; i++) {
     for(int j = 0; j<N; j++) {
         pole[i][j].h = (h1+h2)/2;
         pole[i][j].y_x = {y[i], x[j]};
         //определяем показатель alpha для каждой точки
-        if (f_left(pole[i][j].y_x.first, pole[i][j].y_x.second) && f_right(pole[i][j].y_x.first, pole[i][j].y_x.second)
-        && f_bottom(pole[i][j].y_x.first, pole[i][j].y_x.second) && f_top(pole[i][j].y_x.first, pole[i][j].y_x.second)) {
+        if (f_left(pole[i][j].y_x.first, pole[i][j].y_x.second, left) && f_right(pole[i][j].y_x.first, pole[i][j].y_x.second, right)
+        && f_bottom(pole[i][j].y_x.first, pole[i][j].y_x.second, bottom) && f_top(pole[i][j].y_x.first, pole[i][j].y_x.second, top)) {
             pole[i][j].alpha = 1;
         }
         else {pole[i][j].alpha = 4;}
         pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second);
     }
 }
+
+file2.close();
 
 //определим тип границы для каждоый точки 
 int sum = 0;
@@ -285,7 +375,7 @@ file1 << std::endl;
 
 for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        file1 << pole[i][j].h << " ";
+        file1 << pole[i][j].alpha << " ";
     }
     file1 << std::endl;  
 }

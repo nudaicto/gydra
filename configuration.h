@@ -10,8 +10,8 @@ class CLine {
 public:
     double k;
     double b;
-    int start;
-    int finish;
+    double start;
+    double finish;
     std::string state;
     double value;
 };
@@ -34,91 +34,91 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& ve
     int i = 0;
     while (i<n) {
         if (result[i]== "form") {
-        i++;
+        i++; if (i>=n) {break;}
         if (result[i] == "type") {
-            i++;
-            if (result[i] == "line") {vec.push_back(CLine{}); i++;}
-            else if (result[i] == "circle") {vec.push_back(CCircle{}); i++;}
+            i++; if (i>=n) {break;}
+            if (result[i] == "line") {vec.push_back(CLine{}); i++; if (i>=n) {break;}}
+            else if (result[i] == "circle") {vec.push_back(CCircle{}); i++; if (i>=n) {break;}}
             else {std::cout << "Ошибка в синтаксисе файла" << std::endl; break;}
 
             auto& last = vec.back();
-
             if (result[i] == "k") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
                     if constexpr(std::is_same_v<T, CLine>) {obj.k = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "b") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
                     if constexpr(std::is_same_v<T, CLine>) {obj.b = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "start") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
-                    if constexpr(std::is_same_v<T, CLine>) {obj.start = std::stoi(result[i]);}
+                    if constexpr(std::is_same_v<T, CLine>) {obj.start = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "finish") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
-                    if constexpr(std::is_same_v<T, CLine>) {obj.finish = std::stoi(result[i]);}
+                    if constexpr(std::is_same_v<T, CLine>) {obj.finish = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
 
             if (result[i] == "x0") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
                     if constexpr(std::is_same_v<T, CCircle>) {obj.x0 = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "y0") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
-                    if constexpr(std::is_same_v<T, CCircle>) {obj.y0 = std::stoi(result[i]);}
+                    if constexpr(std::is_same_v<T, CCircle>) {obj.y0 = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "R") {
-                i++;
+                i++; if (i>=n) {break;}
                 std::visit([&](auto& obj) {
                     using T = std::decay_t<decltype(obj)>;
-                    if constexpr(std::is_same_v<T, CCircle>) {obj.R = std::stoi(result[i]);}
+                    if constexpr(std::is_same_v<T, CCircle>) {obj.R = std::stod(result[i]);}
                 }, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
+            std::cout << result[i] << std::endl;
         }
         else {break;}
         }
         if (result[i]== "u") {
-        i++;
+        i++; if (i>=n) {break;}
         if (result[i] == "type") {
-            i++;
+            i++; if (i>=n) {break;}
             auto& last = vec.back();
             if (result[i] == "zero_gradient") {
                 std::visit([&](auto& obj) {obj.state = result[i];}, last);
-                i++;
+                i++; if (i>=n) {break;}
             }
             if (result[i] == "fixed") {
                 std::visit([&](auto& obj) {obj.state = result[i];}, last);
-                i++;
+                i++; if (i>=n) {break;}
                 if (result[i] == "value") {
-                    i++;
+                    i++; if (i>=n) {break;}
                     std::visit([&](auto& obj) {obj.value = std::stoi(result[i]);}, last);
-                    i++;
+                    i++; if (i>=n) {break;}
                 }
             }
         }
