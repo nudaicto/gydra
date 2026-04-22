@@ -24,7 +24,7 @@ public:
     double value;
 };
 
-void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& vec) {
+void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& vec, double &allalpha) {
     char delimeter = ' ';
     std::vector<std::string> result; 
     std::stringstream ss(line);
@@ -32,6 +32,7 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& ve
     while (std::getline(ss, word, delimeter)) {result.push_back(word);}
     int n = result.size();
     int i = 0;
+
     while (i<n) {
         if (result[i]== "form") {
         i++; if (i>=n) {break;}
@@ -39,6 +40,14 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& ve
             i++; if (i>=n) {break;}
             if (result[i] == "line") {vec.push_back(CLine{}); i++; if (i>=n) {break;}}
             else if (result[i] == "circle") {vec.push_back(CCircle{}); i++; if (i>=n) {break;}}
+            else if (result[i] == "all") {
+                i++; if (i>=n) {break;}
+                if (result[i] == "alpha") {
+                    i++; if (i>=n) {break;}
+                    allalpha = std::stod(result[i]);
+                    i++; if (i>=n) {break;}
+                }
+            }
             else {std::cout << "Ошибка в синтаксисе файла" << std::endl; break;}
 
             auto& last = vec.back();
@@ -99,7 +108,14 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle>>& ve
                 }, last);
                 i++; if (i>=n) {break;}
             }
-            std::cout << result[i] << std::endl;
+            if (result[i]=="alpha") {
+                i++; if (i>=n) {break;}
+                std::visit([&](auto& obj) {
+                    using T = std::decay_t<decltype(obj)>;
+                    obj.value = std::stod(result[i]);
+                }, last);
+                i++; if (i>=n) {break;}
+            }
         }
         else {break;}
         }

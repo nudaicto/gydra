@@ -52,7 +52,7 @@ labels = ax.clabel(contour_lines, inline=True, fontsize=14, fmt='%.1f')
 mask_for_arrows = ~hide_mask & ((alpha == 1) | (alpha == 2) | (alpha == 3))
 
 # 4. Векторное поле (только в активной области)
-step = 6
+step = 5
 
 # Создаем разреженные сетки
 X_sparse = X[::step, ::step]

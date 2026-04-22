@@ -7,7 +7,7 @@
 #include <variant>
 #include "configuration.h"
 
-bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -23,7 +23,7 @@ bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
     }
     return false;
 }
-bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -39,7 +39,7 @@ bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec
     }
     return false;
 }
-bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -55,7 +55,7 @@ bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec)
     }
     return false;
 }
-bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) {
+bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -72,10 +72,23 @@ bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec) 
     return false;
 }
 
-double f_k(double y, double x) {
-    if (y<0.5*x) {return 2;}
-    if (((x-40)*(x-40)+(y-80)*(y-80))<=160) {return 2;}
-    return 1;
+double f_k(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+    for (auto& item: vec) {
+         double result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    if (y<obj.k*x+obj.b) {return obj.value;}
+                }
+            }
+            if constexpr(std::is_same_v<T,CCircle>) {
+                if (((x-obj.x0)*(x-obj.x0)+(y-obj.y0)*(y-obj.y0))<=obj.R*obj.R) {return obj.value;}
+            }
+            return allalpha;
+        }, item);
+        if (result != allalpha) {return result;}
+    }
+    return allalpha;
 }
 
 class CPoint {
@@ -104,8 +117,8 @@ public:
 int main() {
 int x_max = 100;
 int y_max = 150;
-double dx = 0.75;
-double dy = 0.75;
+double dx = 1;
+double dy = 1;
 int h1 = 100;
 int h2 =90;
 std::vector<double> x(1);
@@ -137,6 +150,9 @@ std::vector<std::variant<CLine, CCircle>> top;
 std::vector<std::variant<CLine, CCircle>> bottom;
 std::vector<std::variant<CLine, CCircle>> right;
 std::vector<std::variant<CLine, CCircle>> left;
+std::vector<std::variant<CLine, CCircle>> vec_f_k;
+
+double allalpha;
 
 std::string line;
 std::ifstream file2(filename);
@@ -144,22 +160,27 @@ if (file2.is_open()) {
     while (std::getline(file2, line)) {
         if (line=="f_top") {
             while (std::getline(file2, line) && !line.empty()) {
-                read(line, top);
+                read(line, top, allalpha);
             }
         }
         if (line=="f_bottom") {
             while (std::getline(file2, line) && !line.empty()) {
-                read(line, bottom);
+                read(line, bottom, allalpha);
             }
         }
         if (line=="f_right") {
             while (std::getline(file2, line) && !line.empty()) {
-                read(line, right);
+                read(line, right, allalpha);
             }
         }
         if (line=="f_left") {
             while (std::getline(file2, line) && !line.empty()) {
-                read(line, left);
+                read(line, left, allalpha);
+            }
+        }
+        if (line=="f_k") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, vec_f_k, allalpha);
             }
         }
     }
@@ -170,12 +191,12 @@ for(int i = 0; i<M; i++) {
         pole[i][j].h = (h1+h2)/2;
         pole[i][j].y_x = {y[i], x[j]};
         //определяем показатель alpha для каждой точки
-        if (f_left(pole[i][j].y_x.first, pole[i][j].y_x.second, left) && f_right(pole[i][j].y_x.first, pole[i][j].y_x.second, right)
-        && f_bottom(pole[i][j].y_x.first, pole[i][j].y_x.second, bottom) && f_top(pole[i][j].y_x.first, pole[i][j].y_x.second, top)) {
+        if (f_left(pole[i][j].y_x.first, pole[i][j].y_x.second, left, allalpha) && f_right(pole[i][j].y_x.first, pole[i][j].y_x.second, right, allalpha)
+        && f_bottom(pole[i][j].y_x.first, pole[i][j].y_x.second, bottom, allalpha) && f_top(pole[i][j].y_x.first, pole[i][j].y_x.second, top, allalpha)) {
             pole[i][j].alpha = 1;
         }
         else {pole[i][j].alpha = 4;}
-        pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second);
+        pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_k, allalpha);
     }
 }
 
@@ -285,7 +306,7 @@ double e = 0.00001;
 double e0 = 10.0;
 double h_old = 0.0;
 
-int max_iter = 10000;
+int max_iter = 12000;
 
 //сам расчет
 
@@ -375,7 +396,7 @@ file1 << std::endl;
 
 for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        file1 << pole[i][j].alpha << " ";
+        file1 << pole[i][j].k << " ";
     }
     file1 << std::endl;  
 }
