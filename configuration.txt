@@ -20,6 +20,10 @@ form type all alpha 1
 form type line k 0.5 b 0 start 0 finish 150 alpha 2
 form type circle x0 40 y0 80 R 12 alpha 2
 
+f_inlet
+form type square x1 20 y1 40 x2 40 y2 60
+form type circle x0 60 y0 80 R 12
+
 x_max 100
 y_max 150
 dx 0.75

@@ -7,7 +7,7 @@
 #include <variant>
 #include "configuration.h"
 
-bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -23,7 +23,7 @@ bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, d
     }
     return false;
 }
-bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -39,7 +39,7 @@ bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec
     }
     return false;
 }
-bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -55,7 +55,7 @@ bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec,
     }
     return false;
 }
-bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -72,7 +72,28 @@ bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, 
     return false;
 }
 
-double f_k(double y, double x, std::vector<std::variant<CLine, CCircle>>& vec, double& allalpha) {
+bool f_inlet(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+    for (auto& item: vec) {
+        bool result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CSquare>) {
+                if (x>obj.x1 && x<obj.x2 && y>obj.y1 && y<obj.y2) {
+                    return true;
+                }
+                else {return false;}
+            }
+            else if constexpr(std::is_same_v<T,CCircle>) {
+                if (((x-obj.x0)*(x-obj.x0)+(y-obj.y0)*(y-obj.y0))<=obj.R*obj.R) {return true;}
+                else {return false;}
+            }
+            else {return false;}
+        }, item);
+        if (result) {return true;}
+    }
+    return false;
+}
+
+double f_k(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
          double result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -146,11 +167,12 @@ std::vector<std::vector<CPoint>> pole(M, std::vector<CPoint>(N, CPoint()));
 std::ifstream out;
 std::string filename = "configuration.txt";
 
-std::vector<std::variant<CLine, CCircle>> top;
-std::vector<std::variant<CLine, CCircle>> bottom;
-std::vector<std::variant<CLine, CCircle>> right;
-std::vector<std::variant<CLine, CCircle>> left;
-std::vector<std::variant<CLine, CCircle>> vec_f_k;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> top;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> bottom;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> right;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> left;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_k;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_inlet;
 
 double allalpha;
 
@@ -183,6 +205,11 @@ if (file2.is_open()) {
                 read(line, vec_f_k, allalpha);
             }
         }
+        if (line=="f_inlet") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, vec_f_inlet, allalpha);
+            }
+        }
     }
 }
 
@@ -197,6 +224,7 @@ for(int i = 0; i<M; i++) {
         }
         else {pole[i][j].alpha = 4;}
         pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_k, allalpha);
+        if (f_inlet(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_inlet, allalpha)) {pole[i][j].alpha = 4;}
     }
 }
 
