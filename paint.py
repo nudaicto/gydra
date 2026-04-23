@@ -43,7 +43,7 @@ cbar = plt.colorbar(contour, ax=ax)
 cbar.set_label('Напор h, м', fontsize=12, fontweight='bold')
 
 # 2. Линии равного напора (тоже с маской)
-contour_lines = ax.contour(X, Y, h_masked, levels=15, colors='black', linewidths=0.6, alpha=0.7)
+contour_lines = ax.contour(X, Y, h_masked, levels=20, colors='black', linewidths=0.6, alpha=0.7)
 labels = ax.clabel(contour_lines, inline=True, fontsize=14, fmt='%.1f')
 #for label in labels:
     #.set_path_effects([path_effects.withStroke(linewidth=2, foreground='white')])

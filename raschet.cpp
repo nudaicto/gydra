@@ -138,10 +138,10 @@ public:
 int main() {
 int x_max = 100;
 int y_max = 150;
-double dx = 1;
-double dy = 1;
+double dx = 0.75;
+double dy = 0.75;
 int h1 = 100;
-int h2 =90;
+int h2 = 90;
 std::vector<double> x(1);
 std::vector<double> y(1);
 
@@ -217,6 +217,7 @@ for(int i = 0; i<M; i++) {
     for(int j = 0; j<N; j++) {
         pole[i][j].h = (h1+h2)/2;
         pole[i][j].y_x = {y[i], x[j]};
+
         //определяем показатель alpha для каждой точки
         if (f_left(pole[i][j].y_x.first, pole[i][j].y_x.second, left, allalpha) && f_right(pole[i][j].y_x.first, pole[i][j].y_x.second, right, allalpha)
         && f_bottom(pole[i][j].y_x.first, pole[i][j].y_x.second, bottom, allalpha) && f_top(pole[i][j].y_x.first, pole[i][j].y_x.second, top, allalpha)) {
@@ -224,7 +225,42 @@ for(int i = 0; i<M; i++) {
         }
         else {pole[i][j].alpha = 4;}
         pole[i][j].k = f_k(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_k, allalpha);
-        if (f_inlet(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_inlet, allalpha)) {pole[i][j].alpha = 4;}
+        if (f_inlet(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_inlet, allalpha)) {
+            pole[i][j].alpha = 4;            
+        }
+    }
+}
+
+for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+        
+        // Проверка: точка внутри кубика И не на внешней границе
+        bool is_boundary = (i == 0 || i == M-1 || j == 0 || j == N-1);
+        
+        if (!is_boundary && f_inlet(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_inlet, allalpha)) {
+            
+            // Помечаем соседей, но только если они:
+            // 1. В пределах массива
+            // 2. Не являются препятствием
+            // 3. Не являются внешней границей (board == "no")
+            
+            // Левый сосед
+            if (j > 0 && pole[i][j-1].alpha != 4 && pole[i][j-1].board == "no") {
+                pole[i][j-1].board = "obs_right";
+            }
+            // Правый сосед
+            if (j + 1 < N && pole[i][j+1].alpha != 4 && pole[i][j+1].board == "no") {
+                pole[i][j+1].board = "obs_left";
+            }
+            // Нижний сосед
+            if (i > 0 && pole[i-1][j].alpha != 4 && pole[i-1][j].board == "no") {
+                pole[i-1][j].board = "obs_bottom";
+            }
+            // Верхний сосед
+            if (i + 1 < M && pole[i+1][j].alpha != 4 && pole[i+1][j].board == "no") {
+                pole[i+1][j].board = "obs_top";
+            }
+        }
     }
 }
 
@@ -234,6 +270,7 @@ file2.close();
 int sum = 0;
 for(int i = 1; i<M-1; i++) {
     for(int j = 1; j<N-1; j++) {
+        if (f_inlet(pole[i][j].y_x.first, pole[i][j].y_x.second, vec_f_inlet, allalpha)) {continue;}
         if (pole[i][j].alpha==4) {
             int s[4];
             s[0] = pole[i][j-1].alpha;
@@ -317,7 +354,7 @@ if (pole[0][N-1].alpha == 4 && pole[1][N-2].alpha == 1) {pole[0][N-1].board = "u
 //определяем типа граничного условия для каждой точки
 for (int i = 0; i<M; i++) {
     for (int j = 1; j<N-1; j++) {
-        if (pole[i][j].board!="no") {
+        if (pole[i][j].board!="no" && pole[i][j].board!="obs_right" && pole[i][j].board!="obs_left" && pole[i][j].board!="obs_top"&& pole[i][j].board!="obs_bottom") {
             pole[i][j].type = "zero_gradient";
         } 
     }
@@ -334,58 +371,95 @@ double e = 0.00001;
 double e0 = 10.0;
 double h_old = 0.0;
 
-int max_iter = 12000;
+int max_iter = 15000;
+
+int count = 0;
+for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+        if (pole[i][j].alpha == 1 && pole[i][j].board == "no") count++;
+    }
+}
+std::cout << "Внутренних водных узлов: " << count << std::endl;
 
 //сам расчет
 
-for (int iter = 0; iter<max_iter; iter++) {
+for (int iter = 0; iter < max_iter; iter++) {
     e0 = 0;
-    for (int i = 0; i<M; i++) {
-        for (int j = 0; j<N; j++) {
-            if (pole[i][j].alpha == 4 && pole[i][j].board == "no") {continue;}
+    // ЭТАП 1: Считаем только внутренние точки (alpha==1, board=="no")
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
             h_old = pole[i][j].h;
-            if (pole[i][j].alpha == 1 && pole[i][j].board == "no") {
+            
+            if (pole[i][j].alpha) {
+                
                 double dx2 = dx * dx;
                 double dy2 = dy * dy;
-
                 double k_ij = pole[i][j].k;
 
-                double k_left   = k_ij + pole[i][j-1].k;
-                double k_right  = k_ij + pole[i][j+1].k;
-                double k_down   = k_ij + pole[i-1][j].k;
-                double k_up     = k_ij + pole[i+1][j].k;
+                double k_left = 0, k_right = 0, k_down = 0, k_up = 0;
+                double h_left = pole[i][j].h, h_right = pole[i][j].h, 
+                    h_down = pole[i][j].h, h_up = pole[i][j].h;
 
-                double numerator = (k_left   / dx2) * pole[i][j-1].h +
-                   (k_right  / dx2) * pole[i][j+1].h +
-                   (k_down   / dy2) * pole[i-1][j].h +
-                   (k_up     / dy2) * pole[i+1][j].h;
+                // Левая грань: если НЕТ препятствия слева (board != "obs_left")
+                if (j > 0 && pole[i][j].board != "obs_left") {
+                    k_left = 2.0 * k_ij * pole[i][j-1].k / (k_ij + pole[i][j-1].k + 1e-15);
+                    h_left = pole[i][j-1].h;
+                }
+
+                // Правая грань: если НЕТ препятствия справа (board != "obs_right")
+                if (j + 1 < N && pole[i][j].board != "obs_right") {
+                    k_right = 2.0 * k_ij * pole[i][j+1].k / (k_ij + pole[i][j+1].k + 1e-15);
+                    h_right = pole[i][j+1].h;
+                }
+
+                // Нижняя грань: если НЕТ препятствия снизу (board != "obs_bottom")
+                if (i > 0 && pole[i][j].board != "obs_bottom") {
+                    k_down = 2.0 * k_ij * pole[i-1][j].k / (k_ij + pole[i-1][j].k + 1e-15);
+                    h_down = pole[i-1][j].h;
+                }
+
+                // Верхняя грань: если НЕТ препятствия сверху (board != "obs_top")
+                if (i + 1 < M && pole[i][j].board != "obs_top") {
+                    k_up = 2.0 * k_ij * pole[i+1][j].k / (k_ij + pole[i+1][j].k + 1e-15);
+                    h_up = pole[i+1][j].h;
+                }
+
+                double numerator = (k_left / dx2) * h_left +
+                                   (k_right / dx2) * h_right +
+                                   (k_down / dy2) * h_down +
+                                   (k_up / dy2) * h_up;
 
                 double denominator = k_left / dx2 + k_right / dx2 + k_down / dy2 + k_up / dy2;
 
-                pole[i][j].h = numerator / denominator;
-                
+                if (denominator > 1e-15) {
+                    pole[i][j].h = numerator / denominator;
+                    e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
+                }
             }
-            if (pole[i][j].type == "fixed") {
-                pole[i][j].h = pole[i][j].value;
-                continue;
-            }
-            if (pole[i][j].type == "zero_gradient") {
-                if (pole[i][j].board == "h_bottom") {pole[i][j].h = pole[i+1][j].h;}
-
-                if (pole[i][j].board == "h_top") {pole[i][j].h = pole[i-1][j].h;}
-
-                if (pole[i][j].board == "v_right") {pole[i][j].h = pole[i][j-1].h;}
-
-                if (pole[i][j].board == "v_left") {pole[i][j].h = pole[i][j+1].h;}
-            }
-            if (pole[i][j].board == "ugol_1") {pole[i][j].h = (pole[i-1][j].h + pole[i][j+1].h)/2;}
-            if (pole[i][j].board == "ugol_2") {pole[i][j].h = (pole[i-1][j].h + pole[i][j-1].h)/2;}
-            if (pole[i][j].board == "ugol_3") {pole[i][j].h = (pole[i+1][j].h + pole[i][j-1].h)/2;}
-            if (pole[i][j].board == "ugol_4") {pole[i][j].h = (pole[i+1][j].h + pole[i][j+1].h)/2;}
-
-            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
         }
     }
+    // ЭТАП 2: Применяем все граничные условия (без пересчёта по формуле)
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            h_old = pole[i][j].h;
+            if (pole[i][j].type == "fixed") {
+                pole[i][j].h = pole[i][j].value;
+            }
+            if (pole[i][j].type == "zero_gradient") {
+                if (pole[i][j].board == "h_bottom") pole[i][j].h = pole[i+1][j].h;
+                if (pole[i][j].board == "h_top")    pole[i][j].h = pole[i-1][j].h;
+                if (pole[i][j].board == "v_right")  pole[i][j].h = pole[i][j-1].h;
+                if (pole[i][j].board == "v_left")   pole[i][j].h = pole[i][j+1].h;
+            }
+            if (pole[i][j].board == "ugol_1") pole[i][j].h = (pole[i-1][j].h + pole[i][j+1].h)/2;
+            if (pole[i][j].board == "ugol_2") pole[i][j].h = (pole[i-1][j].h + pole[i][j-1].h)/2;
+            if (pole[i][j].board == "ugol_3") pole[i][j].h = (pole[i+1][j].h + pole[i][j-1].h)/2;
+            if (pole[i][j].board == "ugol_4") pole[i][j].h = (pole[i+1][j].h + pole[i][j+1].h)/2;
+            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
+        }
+        
+    }
+
     if (e0 < e) {
         std:: cout << "Сошлось за " << iter + 1 << " итераций" << std::endl;
         break;
@@ -424,54 +498,88 @@ file1 << std::endl;
 
 for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        file1 << pole[i][j].k << " ";
+        file1 << pole[i][j].board << " ";
     }
     file1 << std::endl;  
 }
 
 //теперь нам нужно посчитать поле скоростей. 
 
-for (int i = 0; i<M; i++) {
-    for(int j = 0; j<N; j++) {
-        if (pole[i][j].board == "v_right" || pole[i][j].board == "ugol_2" || pole[i][j].board == "ugol_3") {
-            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
-            if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j].h - pole[i][j-1].h)/dx;}
-        }
+for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
         
+        // === Пропускаем само препятствие ===
+        if (pole[i][j].alpha == 4) {
+            pole[i][j].v.first = 0;
+            pole[i][j].v.second = 0;
+            continue;
+        }
+
+        // =======================
+        // РАСЧЁТ V_x (v.second)
+        // =======================
+        
+        // 1. Приоритет 1: Граница с препятствием (нулевой поток через грань)
+        if (pole[i][j].board == "obs_right") {
+            // Препятствие справа → нормальная скорость (вправо) должна быть 0
+            pole[i][j].v.second = 0; 
+        }
+        else if (pole[i][j].board == "obs_left") {
+            // Препятствие слева → нормальная скорость (влево) должна быть 0
+            pole[i][j].v.second = 0;
+        }
+        // 2. Приоритет 2: Внешние границы домена
+        else if (pole[i][j].board == "v_right" || pole[i][j].board == "ugol_2" || pole[i][j].board == "ugol_3") {
+            if (pole[i][j].type == "zero_gradient") pole[i][j].v.second = 0;
+            else if (pole[i][j].type == "fixed") pole[i][j].v.second = -pole[i][j].k * (pole[i][j].h - pole[i][j-1].h) / dx;
+        }
         else if (pole[i][j].board == "v_left" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_4") {
-            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.second = 0;}
-            if (pole[i][j].type == "fixed") {pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;}
+            if (pole[i][j].type == "zero_gradient") pole[i][j].v.second = 0;
+            else if (pole[i][j].type == "fixed") pole[i][j].v.second = -pole[i][j].k * (pole[i][j+1].h - pole[i][j].h) / dx;
         }
-        else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
-            pole[i][j].v.second = (pole[i][j+1].h - pole[i][j].h)/dx;
+        // 3. Приоритет 3: Обычная внутренняя точка
+        else {
+            pole[i][j].v.second = -pole[i][j].k * (pole[i][j+1].h - pole[i][j].h) / dx;
         }
+
+
+        // =======================
+        // РАСЧЁТ V_y (v.first) — аналогично
+        // =======================
         
-        if (pole[i][j].board == "h_bottom" || pole[i][j].board == "ugol_3" || pole[i][j].board == "ugol_4") {
-            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
-            if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;}
+        // 1. Приоритет 1: Граница с препятствием
+        if (pole[i][j].board == "obs_top") {
+            pole[i][j].v.first = 0;
         }
-        
+        else if (pole[i][j].board == "obs_bottom") {
+            pole[i][j].v.first = 0;
+        }
+        // 2. Приоритет 2: Внешние границы
+        else if (pole[i][j].board == "h_bottom" || pole[i][j].board == "ugol_3" || pole[i][j].board == "ugol_4") {
+            if (pole[i][j].type == "zero_gradient") pole[i][j].v.first = 0;
+            else if (pole[i][j].type == "fixed") pole[i][j].v.first = -pole[i][j].k * (pole[i+1][j].h - pole[i][j].h) / dy;
+        }
         else if (pole[i][j].board == "h_top" || pole[i][j].board == "ugol_1" || pole[i][j].board == "ugol_2") {
-            if (pole[i][j].type == "zero_gradient") {pole[i][j].v.first = 0;}
-            if (pole[i][j].type == "fixed") {pole[i][j].v.first = (pole[i][j].h - pole[i-1][j].h)/dy;}
+            if (pole[i][j].type == "zero_gradient") pole[i][j].v.first = 0;
+            else if (pole[i][j].type == "fixed") pole[i][j].v.first = -pole[i][j].k * (pole[i][j].h - pole[i-1][j].h) / dy;
         }
-        
-        else if (!(pole[i][j].alpha == 4 && pole[i][j].board == "no")) {
-            pole[i][j].v.first = (pole[i+1][j].h - pole[i][j].h)/dy;
+        // 3. Приоритет 3: Обычная точка
+        else {
+            pole[i][j].v.first = -pole[i][j].k * (pole[i+1][j].h - pole[i][j].h) / dy;
         }
     }
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file1 << -pole[i][j].k*pole[i][j].v.first << " ";
+        file1 << pole[i][j].v.first << " ";
     }
     file1 << std::endl;  
 }
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
-        file1 << -pole[i][j].k*pole[i][j].v.second << " ";
+        file1 << pole[i][j].v.second << " ";
     }
     file1 << std::endl;  
 }
@@ -488,24 +596,62 @@ for(int i = 0; i<M; i++ ) {
               << pole[i][j].alpha << ","         
               << pole[i][j].board << ","     
               << pole[i][j].type << ","         
-              << -pole[i][j].k * pole[i][j].v.first << "," 
-              << -pole[i][j].k * pole[i][j].v.second << std::endl;
+              << pole[i][j].v.first << "," 
+              << pole[i][j].v.second << std::endl;
     } 
 }
 
 file.close();
 
+int count_obstacle = 0;
+for (int i = 0; i < M; i++)
+    for (int j = 0; j < N; j++)
+        if (pole[i][j].alpha == 4) count_obstacle++;
+
+std::cout << "Obstacle cells: " << count_obstacle << "\n";
+
+// Проверка: у всех ячеек препятствия скорость должна быть ~0
+double max_v_obstacle = 0;
+for (int i = 0; i < M; i++)
+    for (int j = 0; j < N; j++)
+        if (pole[i][j].alpha == 4) {
+            double v_mag = std::hypot(pole[i][j].v.first, pole[i][j].v.second);
+            max_v_obstacle = std::max(max_v_obstacle, v_mag);
+        }
+std::cout << "Max |v| inside obstacle: " << max_v_obstacle << "\n";
+
 //считаем расход через вертикальную стенку
-int x_j = 5;
+int x_j = 50;
 double Q = 0;
-
-for (int i = 0; i<M; i++) {
-    Q+=-pole[i][x_j].k*pole[i][x_j].v.second*dy;
+for (int i = 0; i < M; i++) {
+    // Пропускаем ячейки внутри препятствия
+    if (pole[i][x_j].alpha == 4) continue;
+    
+    // v.second уже = V_x (содержит k), просто интегрируем по y
+    Q += pole[i][x_j].v.second * dy;
 }
+std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
 
-std::cout << "Расход воды через вертикальную стенку x = " << pole[0][x_j].y_x.second << " Q = " << Q << " " << "m^3/s" << std::endl;
+x_j = 65;
+Q = 0;
+for (int i = 0; i < M; i++) {
+    // Пропускаем ячейки внутри препятствия
+    if (pole[i][x_j].alpha == 4) continue;
+    
+    // v.second уже = V_x (содержит k), просто интегрируем по y
+    Q += pole[i][x_j].v.second * dy;
+}
+std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
 
-return 0;
-
+x_j = 125;
+Q = 0;
+for (int i = 0; i < M; i++) {
+    // Пропускаем ячейки внутри препятствия
+    if (pole[i][x_j].alpha == 4) continue;
+    
+    // v.second уже = V_x (содержит k), просто интегрируем по y
+    Q += pole[i][x_j].v.second * dy;
+}
+std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
 
 }
