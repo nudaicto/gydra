@@ -24,29 +24,40 @@ int main() {
 
     if (file.is_open()) {
         while (std::getline(file, line)) {
-            if (line=="f_k") {
+            char delimeter = ' ';
+            std::vector<std::string> result; 
+            std::stringstream ss(line);
+            std::string word;
+            while (std::getline(ss, word, delimeter)) {result.push_back(word);}
+
+            if (result[0]=="x_max") {x_max=std::stod(result[1])}
+            if (result[0]=="y_max") {x_max=std::stod(result[1])}
+            if (result[0]=="dx") {x_max=std::stod(result[1])}
+            if (result[0]=="dy") {x_max=std::stod(result[1])}
+
+            if (result[0]=="f_k") {
                 while (std::getline(file, line) && !line.empty()) {
                     std::cout << line << std::endl;
                     read(line, f_k, allalpha);
                 }
             }
-            if (line=="f_top") {
+            if (result[0]=="f_top") {
                 while (std::getline(file, line) && !line.empty()) {
                     read(line, bottom, allalpha);
                 }
                 //std::cout << 1 << std::endl;
             }
-            if (line=="f_bottom") {
+            if (result[0]=="f_bottom") {
                 while (std::getline(file, line) && !line.empty()) {
                     read(line, bottom, allalpha);
                 }
             }
-            if (line=="f_right") {
+            if (result[0]=="f_right") {
                 while (std::getline(file, line) && !line.empty()) {
                     read(line, right, allalpha);
                 }
             }
-            if (line=="f_left") {
+            if (result[0]=="f_left") {
                 while (std::getline(file, line) && !line.empty()) {
                     read(line, left, allalpha);
                 }

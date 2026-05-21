@@ -170,7 +170,9 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle, CSqu
                 i++; if (i>=n) {break;}
             }
             if (result[i] == "fixed") {
-                std::visit([&](auto& obj) {obj.state = result[i];}, last);
+                std::visit([&](auto& obj) {obj.state = result[i];
+                }, last);
+
                 i++; if (i>=n) {break;}
                 if (result[i] == "value") {
                     i++; if (i>=n) {break;}

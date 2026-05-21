@@ -7,6 +7,31 @@
 #include <variant>
 #include "configuration.h"
 
+class CPoint {
+public:
+    std::pair<double,double> y_x; 
+    double h;
+    std::pair<double,double> v; //будем считать, что v.first = v_y, а v.second = v_x;
+    int alpha;
+    int k;
+    std::string board;
+    std::string type;
+    double value;
+    double pressure;
+
+    CPoint(std::pair<double,double> _y_x = {0,0}, 
+        double _h = 0, 
+        std::pair<double,double> _v = {0, 0}, 
+        int _alpha = 1,
+        int _k = 1, 
+        std::string _board = "no",
+        std::string _type = "not_speciefed",
+        double _value = 0,
+        double pressure = 0) 
+        : y_x(_y_x), h(_h), v(_v), alpha(_alpha), k(_k), board(_board), type(_type), value(_value) {}
+
+};
+
 bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
@@ -22,6 +47,26 @@ bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare,
         if (result) {return true;}
     }
     return false;
+}
+std::string f_top_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
+    std::string sms = std::string("error");
+    double x = point.y_x.second;
+    double y = point.y_x.first;
+    for (auto& item: vec) {
+        std::string result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    if (obj.state == "fixed") {point.value = obj.value;}
+                    return obj.state;
+                }
+                else {return sms;}
+            }
+            else {return sms;}
+        }, item);
+        if (result!=sms) {return result;}
+    }
+    return sms;
 }
 bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
@@ -39,6 +84,28 @@ bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSqua
     }
     return false;
 }
+
+std::string f_bottom_type (CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
+    std::string sms = std::string("error");
+    double x = point.y_x.second;
+    double y = point.y_x.first;    
+    for (auto& item: vec) {
+        std::string result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    if (obj.state == "fixed") {point.value = obj.value;}
+                    return obj.state;
+                }
+                else {return sms;}
+            }
+            else {return sms;}
+        }, item);
+        if (result!=sms) {return result;}
+    }
+    return sms;
+}
+
 bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
@@ -55,6 +122,28 @@ bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquar
     }
     return false;
 }
+
+std::string f_right_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
+    std::string sms = std::string("error");
+    double x = point.y_x.second;
+    double y = point.y_x.first;    
+    for (auto& item: vec) {
+        std::string result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    if (obj.state == "fixed") {point.value = obj.value;}
+                    return obj.state;
+                }
+                else {return sms;}
+            }
+            else {return sms;}
+        }, item);
+        if (result!=sms) {return result;}
+    }
+    return sms;
+}
+
 bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
@@ -70,6 +159,27 @@ bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare
         if (result) {return true;}
     }
     return false;
+}
+
+std::string f_left_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
+    std::string sms = std::string("error");
+    double x = point.y_x.second;
+    double y = point.y_x.first;    
+    for (auto& item: vec) {
+        std::string result = std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr(std::is_same_v<T,CLine>) {
+                if (x>=obj.start && x<=obj.finish) {
+                    if (obj.state == "fixed") {point.value = obj.value;}
+                    return obj.state;
+                }
+                else {return sms;}
+            }
+            else {return sms;}
+        }, item);
+        if (result!=sms) {return result;}
+    }
+    return sms;
 }
 
 bool f_inlet(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
@@ -112,36 +222,73 @@ double f_k(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare,
     return allalpha;
 }
 
-class CPoint {
-public:
-    std::pair<double,double> y_x; 
-    double h;
-    std::pair<double,double> v; //будем считать, что v.first = v_y, а v.second = v_x;
-    int alpha;
-    int k;
-    std::string board;
-    std::string type;
-    double value;
-
-    CPoint(std::pair<double,double> _y_x = {0,0}, 
-        double _h = 0, 
-        std::pair<double,double> _v = {0, 0}, 
-        int _alpha = 1,
-        int _k = 1, 
-        std::string _board = "no",
-        std::string _type = "not_speciefed",
-        double _value = 0) 
-        : y_x(_y_x), h(_h), v(_v), alpha(_alpha), k(_k), board(_board), type(_type), value(_value) {}
-
-};
-
 int main() {
-int x_max = 100;
-int y_max = 150;
-double dx = 0.75;
-double dy = 0.75;
-int h1 = 100;
-int h2 = 90;
+double x_max;
+double y_max;
+double dx;
+double dy;
+
+//получаем информацию о границах из файла
+std::ifstream out;
+std::string filename = "configuration.txt";
+
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> top;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> bottom;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> right;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> left;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_k;
+std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_inlet;
+
+double allalpha;
+
+std::string line;
+std::ifstream file2(filename);
+if (file2.is_open()) {
+    while (std::getline(file2, line)) {
+        char delimeter = ' ';
+        std::vector<std::string> result; 
+        std::stringstream ss(line);
+        std::string word;
+        while (std::getline(ss, word, delimeter)) {result.push_back(word);}
+
+        if (result[0]=="x_max") {x_max=std::stod(result[1]);}
+        if (result[0]=="y_max") {y_max=std::stod(result[1]);}
+        if (result[0]=="dx") {dx=std::stod(result[1]);}
+        if (result[0]=="dy") {dy=std::stod(result[1]);}
+
+        if (result[0]=="f_top") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, top, allalpha);
+            }
+        }
+        if (result[0]=="f_bottom") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, bottom, allalpha);
+            }
+        }
+        if (result[0]=="f_right") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, right, allalpha);
+            }
+        }
+        if (result[0]=="f_left") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, left, allalpha);
+            }
+        }
+        if (result[0]=="f_k") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, vec_f_k, allalpha);
+            }
+        }
+        if (result[0]=="f_inlet") {
+            while (std::getline(file2, line) && !line.empty()) {
+                read(line, vec_f_inlet, allalpha);
+            }
+        }
+    }
+}
+
 std::vector<double> x(1);
 std::vector<double> y(1);
 
@@ -163,59 +310,9 @@ int M = y.size();
 
 std::vector<std::vector<CPoint>> pole(M, std::vector<CPoint>(N, CPoint()));
 
-//получаем информацию о границах из файла
-std::ifstream out;
-std::string filename = "configuration.txt";
-
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> top;
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> bottom;
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> right;
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> left;
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_k;
-std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_inlet;
-
-double allalpha;
-
-std::string line;
-std::ifstream file2(filename);
-if (file2.is_open()) {
-    while (std::getline(file2, line)) {
-        if (line=="f_top") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, top, allalpha);
-            }
-        }
-        if (line=="f_bottom") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, bottom, allalpha);
-            }
-        }
-        if (line=="f_right") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, right, allalpha);
-            }
-        }
-        if (line=="f_left") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, left, allalpha);
-            }
-        }
-        if (line=="f_k") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, vec_f_k, allalpha);
-            }
-        }
-        if (line=="f_inlet") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, vec_f_inlet, allalpha);
-            }
-        }
-    }
-}
-
 for(int i = 0; i<M; i++) {
     for(int j = 0; j<N; j++) {
-        pole[i][j].h = (h1+h2)/2;
+        pole[i][j].h = 0;
         pole[i][j].y_x = {y[i], x[j]};
 
         //определяем показатель alpha для каждой точки
@@ -280,12 +377,12 @@ for(int i = 1; i<M-1; i++) {
             sum = s[0] + s[1] + s[2] + s[3];
             if (sum!=16) {
             if (s[0] == s[2] && s[0] == 4) {
-                if (s[1] == 1) {pole[i][j].board = "h_bottom"; }
-                else {pole[i][j].board = "h_top";}
+                if (s[1] == 1) {pole[i][j].board = "h_bottom"; pole[i][j].type = f_bottom_type(pole[i][j], bottom);}
+                else {pole[i][j].board = "h_top"; pole[i][j].type = f_top_type(pole[i][j], top);}
             }
             if (s[1] == s[3] && s[1] == 4) {
-                if (s[0] == 1) {pole[i][j].board = "v_right"; }
-                else {pole[i][j].board = "h_left";}
+                if (s[0] == 1) {pole[i][j].board = "v_right"; pole[i][j].type = f_right_type(pole[i][j], right);}
+                else {pole[i][j].board = "v_left"; pole[i][j].type = f_left_type(pole[i][j], left);}
             }
             if (s[0] == s[1] && s[0] == 4 && s[2]==s[3]) {pole[i][j].board = "ugol_3";}
             if (s[1] == s[2] && s[1] == 4 && s[3]==s[0]) {pole[i][j].board = "ugol_4";}
@@ -308,7 +405,7 @@ for (int i = 1; i<M-1; i++) {
     s1[2] = pole[i-1][0].alpha;
     sum = s1[0] + s1[1] + s1[2];
     if (sum!=12) {
-    if (s1[0] == s1[2] && s1[0] == 4) {pole[i][0].board = "v_left";}
+    if (s1[0] == s1[2] && s1[0] == 4) {pole[i][0].board = "v_left"; pole[i][0].type = f_left_type(pole[i][0], left);}
     if (s1[0] == s1[1] && s1[0] == 4) {pole[i][0].board = "ugol_4";}
     if (s1[1] == s1[2] && s1[1] == 4) {pole[i][0].board = "ugol_1";}
     }
@@ -318,7 +415,7 @@ for (int i = 1; i<M-1; i++) {
     s1[2] = pole[i-1][N-1].alpha;
     sum = s1[0] + s1[1] + s1[2];
     if (sum!=12) {
-    if (s1[0] == s1[2] && s1[0] == 4) {pole[i][N-1].board = "v_right";}
+    if (s1[0] == s1[2] && s1[0] == 4) {pole[i][N-1].board = "v_right"; pole[i][N-1].type = f_right_type(pole[i][N-1], right);}
     if (s1[0] == s1[1] && s1[0] == 4) {pole[i][N-1].board = "ugol_3";}
     if (s1[1] == s1[2] && s1[1] == 4) {pole[i][N-1].board = "ugol_2";}
     }
@@ -330,7 +427,7 @@ for (int j = 1; j<N-1; j++) {
     s1[2] = pole[0][j+1].alpha;
     sum = s1[0] + s1[1] + s1[2];
     if (sum!=12) {
-    if (s1[0] == s1[2] && s1[0] == 4) {pole[0][j].board = "h_bottom";}
+    if (s1[0] == s1[2] && s1[0] == 4) {pole[0][j].board = "h_bottom"; pole[0][j].type = f_bottom_type(pole[0][j], bottom);}
     if (s1[0] == s1[1] && s1[0] == 4) {pole[0][j].board = "ugol_3";}
     if (s1[1] == s1[2] && s1[1] == 4) {pole[0][j].board = "ugol_4";}
     }
@@ -340,7 +437,7 @@ for (int j = 1; j<N-1; j++) {
     s1[2] = pole[M-1][j-1].alpha;
     sum = s1[0] + s1[1] + s1[2];
     if (sum!=12) {
-    if (s1[0] == s1[2] && s1[0] == 4) {pole[M-1][j].board = "h_top";}
+    if (s1[0] == s1[2] && s1[0] == 4) {pole[M-1][j].board = "h_top"; pole[M-1][j].type = f_top_type(pole[M-1][j], top);}
     if (s1[0] == s1[1] && s1[0] == 4) {pole[M-1][j].board = "ugol_2";}
     if (s1[1] == s1[2] && s1[1] == 4) {pole[M-1][j].board = "ugol_1";}
     }
@@ -358,13 +455,6 @@ for (int i = 0; i<M; i++) {
             pole[i][j].type = "zero_gradient";
         } 
     }
-}
-
-for (int i = 0; i<M; i++) {
-    pole[i][0].type = "fixed";
-    pole[i][0].value = h1;
-    pole[i][N-1].type = "fixed";
-    pole[i][N-1].value = h2;
 }
 
 double e = 0.00001;
@@ -385,7 +475,30 @@ std::cout << "Внутренних водных узлов: " << count << std::e
 
 for (int iter = 0; iter < max_iter; iter++) {
     e0 = 0;
-    // ЭТАП 1: Считаем только внутренние точки (alpha==1, board=="no")
+
+    // ЭТАП 1: Применяем все граничные условия (без пересчёта по формуле)
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            h_old = pole[i][j].h;
+            if (pole[i][j].type == "fixed") {
+                pole[i][j].h = pole[i][j].value;
+            }
+            if (pole[i][j].type == "zero_gradient") {
+                if (pole[i][j].board == "h_bottom") pole[i][j].h = pole[i+1][j].h;
+                if (pole[i][j].board == "h_top")    pole[i][j].h = pole[i-1][j].h;
+                if (pole[i][j].board == "v_right")  pole[i][j].h = pole[i][j-1].h;
+                if (pole[i][j].board == "v_left")   pole[i][j].h = pole[i][j+1].h;
+            }
+            if (pole[i][j].board == "ugol_1") pole[i][j].h = (pole[i-1][j].h + pole[i][j+1].h)/2;
+            if (pole[i][j].board == "ugol_2") pole[i][j].h = (pole[i-1][j].h + pole[i][j-1].h)/2;
+            if (pole[i][j].board == "ugol_3") pole[i][j].h = (pole[i+1][j].h + pole[i][j-1].h)/2;
+            if (pole[i][j].board == "ugol_4") pole[i][j].h = (pole[i+1][j].h + pole[i][j+1].h)/2;
+            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
+        }
+        
+    }
+
+    // ЭТАП 2: Считаем только внутренние точки (alpha==1, board=="no")
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
             h_old = pole[i][j].h;
@@ -438,27 +551,6 @@ for (int iter = 0; iter < max_iter; iter++) {
             }
         }
     }
-    // ЭТАП 2: Применяем все граничные условия (без пересчёта по формуле)
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            h_old = pole[i][j].h;
-            if (pole[i][j].type == "fixed") {
-                pole[i][j].h = pole[i][j].value;
-            }
-            if (pole[i][j].type == "zero_gradient") {
-                if (pole[i][j].board == "h_bottom") pole[i][j].h = pole[i+1][j].h;
-                if (pole[i][j].board == "h_top")    pole[i][j].h = pole[i-1][j].h;
-                if (pole[i][j].board == "v_right")  pole[i][j].h = pole[i][j-1].h;
-                if (pole[i][j].board == "v_left")   pole[i][j].h = pole[i][j+1].h;
-            }
-            if (pole[i][j].board == "ugol_1") pole[i][j].h = (pole[i-1][j].h + pole[i][j+1].h)/2;
-            if (pole[i][j].board == "ugol_2") pole[i][j].h = (pole[i-1][j].h + pole[i][j-1].h)/2;
-            if (pole[i][j].board == "ugol_3") pole[i][j].h = (pole[i+1][j].h + pole[i][j-1].h)/2;
-            if (pole[i][j].board == "ugol_4") pole[i][j].h = (pole[i+1][j].h + pole[i][j+1].h)/2;
-            e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
-        }
-        
-    }
 
     if (e0 < e) {
         std:: cout << "Сошлось за " << iter + 1 << " итераций" << std::endl;
@@ -498,7 +590,7 @@ file1 << std::endl;
 
 for(int i = M-1; i>-1; i-- ) {
     for (int j = 0; j<N; j++) {
-        file1 << pole[i][j].board << " ";
+        file1 << pole[i][j].h << " ";
     }
     file1 << std::endl;  
 }
@@ -586,7 +678,17 @@ for(int i = 0; i<M; i++ ) {
 
 file1.close();
 
-file << "y,x,h,alpha,board,type,vy,vx\n";
+file << "y,x,h,alpha,board,type,vy,vx,pressure\n";
+
+double rho = 1000.0;  // кг/м³
+double g = 9.81;      // м/с²
+
+for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+        double P = rho * g * (pole[i][j].h - y[i]);
+        pole[i][j].pressure = P;  // если добавить поле pressure в класс
+    }
+}
 
 for(int i = 0; i<M; i++ ) {
     for (int j = 0; j<N; j++) {
@@ -597,7 +699,8 @@ for(int i = 0; i<M; i++ ) {
               << pole[i][j].board << ","     
               << pole[i][j].type << ","         
               << pole[i][j].v.first << "," 
-              << pole[i][j].v.second << std::endl;
+              << pole[i][j].v.second << ","
+              << pole[i][j].pressure << std::endl;
     } 
 }
 
