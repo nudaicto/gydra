@@ -239,54 +239,105 @@ std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> left;
 std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_k;
 std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>> vec_f_inlet;
 
-double allalpha;
+std::ifstream file2(filename);
+if (!file2.is_open()) {
+    std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: не удалось открыть файл '" << filename << "'" << std::endl;
+    return 1;
+}
+
+x_max = 0; y_max = 0; dx = 0; dy = 0;
+double allalpha = 1.0; // значение по умолчанию
 
 std::string line;
-std::ifstream file2(filename);
-if (file2.is_open()) {
-    while (std::getline(file2, line)) {
-        char delimeter = ' ';
-        std::vector<std::string> result; 
-        std::stringstream ss(line);
-        std::string word;
-        while (std::getline(ss, word, delimeter)) {result.push_back(word);}
+int line_number = 0;
 
-        if (result[0]=="x_max") {x_max=std::stod(result[1]);}
-        if (result[0]=="y_max") {y_max=std::stod(result[1]);}
-        if (result[0]=="dx") {dx=std::stod(result[1]);}
-        if (result[0]=="dy") {dy=std::stod(result[1]);}
-
-        if (result[0]=="f_top") {
+while (std::getline(file2, line)) {
+    line_number++;
+    
+    // Пропуск пустых строк и комментариев
+    if (line.empty() || line[0] == '#') continue;
+    
+    // Токенизация
+    std::vector<std::string> result; 
+    std::stringstream ss(line);
+    std::string word;
+    while (std::getline(ss, word, ' ')) {
+        if (!word.empty()) result.push_back(word);
+    }
+    
+    if (result.empty()) continue;
+    
+    try {
+        // === Параметры сетки ===
+        if (result[0] == "x_max") {
+            if (result.size() < 2) throw std::runtime_error("x_max: отсутствует значение");
+            x_max = std::stod(result[1]);
+            if (x_max <= 0) throw std::runtime_error("x_max должен быть > 0");
+        }
+        else if (result[0] == "y_max") {
+            if (result.size() < 2) throw std::runtime_error("y_max: отсутствует значение");
+            y_max = std::stod(result[1]);
+            if (y_max <= 0) throw std::runtime_error("y_max должен быть > 0");
+        }
+        else if (result[0] == "dx") {
+            if (result.size() < 2) throw std::runtime_error("dx: отсутствует значение");
+            dx = std::stod(result[1]);
+            if (dx <= 0) throw std::runtime_error("dx должен быть > 0");
+        }
+        else if (result[0] == "dy") {
+            if (result.size() < 2) throw std::runtime_error("dy: отсутствует значение");
+            dy = std::stod(result[1]);
+            if (dy <= 0) throw std::runtime_error("dy должен быть > 0");
+        }
+        // === Секции границ ===
+        else if (result[0] == "f_top" || result[0] == "f_bottom" || 
+                 result[0] == "f_right" || result[0] == "f_left" ||
+                 result[0] == "f_k" || result[0] == "f_inlet") {
+            
+            std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>* target_vec = nullptr;
+            if (result[0] == "f_top") target_vec = &top;
+            else if (result[0] == "f_bottom") target_vec = &bottom;
+            else if (result[0] == "f_right") target_vec = &right;
+            else if (result[0] == "f_left") target_vec = &left;
+            else if (result[0] == "f_k") target_vec = &vec_f_k;
+            else if (result[0] == "f_inlet") target_vec = &vec_f_inlet;
+            
+            // Читаем строки секции до пустой строки
             while (std::getline(file2, line) && !line.empty()) {
-                read(line, top, allalpha);
+                line_number++;
+                if (line.empty() || line[0] == '#') continue;
+                read(line, *target_vec, allalpha);
+                // read() теперь сама обрабатывает ошибки и возвращает управление
             }
         }
-        if (result[0]=="f_bottom") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, bottom, allalpha);
-            }
-        }
-        if (result[0]=="f_right") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, right, allalpha);
-            }
-        }
-        if (result[0]=="f_left") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, left, allalpha);
-            }
-        }
-        if (result[0]=="f_k") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, vec_f_k, allalpha);
-            }
-        }
-        if (result[0]=="f_inlet") {
-            while (std::getline(file2, line) && !line.empty()) {
-                read(line, vec_f_inlet, allalpha);
-            }
+        // === Неизвестный ключ ===
+        else {
+            throw std::runtime_error("Неизвестный параметр: '" + result[0] + "'");
         }
     }
+    catch (const std::invalid_argument& e) {
+        std::cerr << "ОШИБКА ПАРСИНГА (строка " << line_number << "): некорректное числовое значение в \"" 
+                  << line << "\"" << std::endl;
+        return 1;
+    }
+    catch (const std::out_of_range& e) {
+        std::cerr << "ОШИБКА ПАРСИНГА (строка " << line_number << "): значение вне диапазона в \"" 
+                  << line << "\"" << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "ОШИБКА КОНФИГУРАЦИИ (строка " << line_number << "): " << e.what() 
+                  << "\nСтрока: \"" << line << "\"" << std::endl;
+        return 1;
+    }
+}
+
+file2.close();
+
+// === Финальная валидация обязательных параметров ===
+if (x_max <= 0 || y_max <= 0 || dx <= 0 || dy <= 0) {
+    std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: не заданы или некорректны параметры сетки (x_max, y_max, dx, dy)" << std::endl;
+    return 1;
 }
 
 std::vector<double> x(1);
@@ -305,8 +356,21 @@ while (i<y_max) {
     y.push_back(i);
 }
 
+// === Проверка адекватности размеров сетки ===
 int N = x.size();
 int M = y.size();
+
+if (N > 10000 || M > 10000) {
+    std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: Слишком мелкая сетка или большая область. "
+              << "N=" << N << ", M=" << M << ". Программа требует >" 
+              << (N * M * sizeof(CPoint) / (1024*1024)) << " МБ памяти." << std::endl;
+    return 1;
+}
+
+if (N < 3 || M < 3) {
+    std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: Сетка слишком мала для расчёта (требуется минимум 3x3)." << std::endl;
+    return 1;
+}
 
 std::vector<std::vector<CPoint>> pole(M, std::vector<CPoint>(N, CPoint()));
 
@@ -360,8 +424,6 @@ for (int i = 0; i < M; i++) {
         }
     }
 }
-
-file2.close();
 
 //определим тип границы для каждоый точки 
 int sum = 0;
@@ -546,14 +608,28 @@ for (int iter = 0; iter < max_iter; iter++) {
 
                 if (denominator > 1e-15) {
                     pole[i][j].h = numerator / denominator;
+                    
+                    // Защита от численного взрыва или потери точности
+                    if (std::isnan(pole[i][j].h) || std::isinf(pole[i][j].h)) {
+                        std::cerr << "ОШИБКА РАСЧЁТА: Получено NaN или Inf в ячейке [" << i << "][" << j << "]. "
+                                << "Возможные причины: некорректные граничные условия или нулевая проницаемость k." << std::endl;
+                        return 1;
+                    }
                     e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
+                } else {
+                    // Если знаменатель близок к нулю, ячейка изолирована. Оставляем h без изменений, но логируем предупреждение.
+                    // (Это не фатально, но полезно знать)
                 }
             }
         }
     }
 
+    if (std::isnan(e0) || std::isinf(e0)) {
+        std::cerr << "ОШИБКА СХОДИМОСТИ: Ошибка e0 стала нечисловой. Прерывание." << std::endl;
+        return 1;
+    }
     if (e0 < e) {
-        std:: cout << "Сошлось за " << iter + 1 << " итераций" << std::endl;
+        std::cout << "Сошлось за " << iter + 1 << " итераций" << std::endl;
         break;
     }
 }
@@ -676,6 +752,10 @@ for(int i = 0; i<M; i++ ) {
     file1 << std::endl;  
 }
 
+if (!file1.good()) {
+    std::cerr << "ОШИБКА ДИСКА: Не удалось корректно записать data.txt." << std::endl;
+    return 1;
+}
 file1.close();
 
 file << "y,x,h,alpha,board,type,vy,vx,pressure\n";
@@ -704,6 +784,10 @@ for(int i = 0; i<M; i++ ) {
     } 
 }
 
+if (!file.good()) {
+    std::cerr << "ОШИБКА ДИСКА: Не удалось корректно записать result.csv (возможно, закончилось место или ошибка файловой системы)." << std::endl;
+    return 1;
+}
 file.close();
 
 int count_obstacle = 0;
@@ -724,37 +808,22 @@ for (int i = 0; i < M; i++)
 std::cout << "Max |v| inside obstacle: " << max_v_obstacle << "\n";
 
 //считаем расход через вертикальную стенку
-int x_j = 50;
-double Q = 0;
-for (int i = 0; i < M; i++) {
-    // Пропускаем ячейки внутри препятствия
-    if (pole[i][x_j].alpha == 4) continue;
-    
-    // v.second уже = V_x (содержит k), просто интегрируем по y
-    Q += pole[i][x_j].v.second * dy;
-}
-std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
+auto calculate_Q = [&](int x_j) {
+    if (x_j < 0 || x_j >= N) {
+        std::cout << "ВНИМАНИЕ: Створ x_j=" << x_j << " за пределами сетки (N=" << N << "). Расход не считается." << std::endl;
+        return 0.0;
+    }
+    double Q_local = 0;
+    for (int i = 0; i < M; i++) {
+        if (pole[i][x_j].alpha == 4) continue;
+        Q_local += pole[i][x_j].v.second * dy;
+    }
+    std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q_local << " m³/s\n";
+    return Q_local;
+};
 
-x_j = 65;
-Q = 0;
-for (int i = 0; i < M; i++) {
-    // Пропускаем ячейки внутри препятствия
-    if (pole[i][x_j].alpha == 4) continue;
-    
-    // v.second уже = V_x (содержит k), просто интегрируем по y
-    Q += pole[i][x_j].v.second * dy;
-}
-std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
-
-x_j = 125;
-Q = 0;
-for (int i = 0; i < M; i++) {
-    // Пропускаем ячейки внутри препятствия
-    if (pole[i][x_j].alpha == 4) continue;
-    
-    // v.second уже = V_x (содержит k), просто интегрируем по y
-    Q += pole[i][x_j].v.second * dy;
-}
-std::cout << "Q(x=" << pole[0][x_j].y_x.second << ") = " << Q << " m³/s\n";
+calculate_Q(50);
+calculate_Q(65);
+calculate_Q(125);
 
 }
