@@ -27,12 +27,12 @@ public:
         std::string _board = "no",
         std::string _type = "not_speciefed",
         double _value = 0,
-        double pressure = 0) 
+        [[maybe_unused]] double pressure = 0) 
         : y_x(_y_x), h(_h), v(_v), alpha(_alpha), k(_k), board(_board), type(_type), value(_value) {}
 
 };
 
-bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -51,7 +51,6 @@ bool f_top(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare,
 std::string f_top_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
     std::string sms = std::string("error");
     double x = point.y_x.second;
-    double y = point.y_x.first;
     for (auto& item: vec) {
         std::string result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -68,7 +67,7 @@ std::string f_top_type(CPoint& point, std::vector<std::variant<CLine, CCircle, C
     }
     return sms;
 }
-bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -87,8 +86,7 @@ bool f_bottom(double y, double x, std::vector<std::variant<CLine, CCircle, CSqua
 
 std::string f_bottom_type (CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
     std::string sms = std::string("error");
-    double x = point.y_x.second;
-    double y = point.y_x.first;    
+    double x = point.y_x.second;   
     for (auto& item: vec) {
         std::string result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -106,7 +104,7 @@ std::string f_bottom_type (CPoint& point, std::vector<std::variant<CLine, CCircl
     return sms;
 }
 
-bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -125,13 +123,12 @@ bool f_right(double y, double x, std::vector<std::variant<CLine, CCircle, CSquar
 
 std::string f_right_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
     std::string sms = std::string("error");
-    double x = point.y_x.second;
     double y = point.y_x.first;    
     for (auto& item: vec) {
         std::string result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
             if constexpr(std::is_same_v<T,CLine>) {
-                if (x>=obj.start && x<=obj.finish) {
+                if (y>=obj.start && y<=obj.finish) {
                     if (obj.state == "fixed") {point.value = obj.value;}
                     return obj.state;
                 }
@@ -144,7 +141,7 @@ std::string f_right_type(CPoint& point, std::vector<std::variant<CLine, CCircle,
     return sms;
 }
 
-bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -163,13 +160,12 @@ bool f_left(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare
 
 std::string f_left_type(CPoint& point, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec) {
     std::string sms = std::string("error");
-    double x = point.y_x.second;
     double y = point.y_x.first;    
     for (auto& item: vec) {
         std::string result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
             if constexpr(std::is_same_v<T,CLine>) {
-                if (x>=obj.start && x<=obj.finish) {
+                if (y>=obj.start && y<=obj.finish) {
                     if (obj.state == "fixed") {point.value = obj.value;}
                     return obj.state;
                 }
@@ -182,7 +178,7 @@ std::string f_left_type(CPoint& point, std::vector<std::variant<CLine, CCircle, 
     return sms;
 }
 
-bool f_inlet(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+bool f_inlet(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
         bool result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;
@@ -203,7 +199,7 @@ bool f_inlet(double y, double x, std::vector<std::variant<CLine, CCircle, CSquar
     return false;
 }
 
-double f_k(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, double& allalpha) {
+double f_k(double y, double x, std::vector<std::variant<CLine, CCircle, CSquare, CTriangle>>& vec, [[maybe_unused]] double& allalpha) {
     for (auto& item: vec) {
          double result = std::visit([&](auto& obj) {
             using T = std::decay_t<decltype(obj)>;

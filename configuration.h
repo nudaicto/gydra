@@ -118,7 +118,6 @@ void prohod(const std::vector<std::string>& result, int& i, int n,
                 i++; 
                 if (i >= n) return;
                 std::visit([&](auto& obj) {
-                    using T = std::decay_t<decltype(obj)>;
                     obj.value = std::stod(result[i]);
                 }, last);
                 i++; 
@@ -184,8 +183,7 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle, CSqu
             auto& last = vec.back();
 
             std::visit([&](auto& obj) {
-                using T = std::decay_t<decltype(obj)>;
-                if constexpr(std::is_same_v<T, CLine>) {
+                if constexpr(std::is_same_v<std::decay_t<decltype(obj)>, CLine>) {
                     while (i < n) {
                         SAFE_IDX(result, i);
                         bool found = false;
@@ -205,7 +203,7 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle, CSqu
                     }
                     VALIDATE_GEOM(obj.start < obj.finish, "для линии: start должен быть < finish");
                 }
-                else if constexpr(std::is_same_v<T, CCircle>) {
+                else if constexpr(std::is_same_v<std::decay_t<decltype(obj)>, CCircle>) {
                     while (i < n) {
                         SAFE_IDX(result, i);
                         bool found = false;
@@ -225,7 +223,7 @@ void read(const std::string& line, std::vector<std::variant<CLine, CCircle, CSqu
                     }
                     VALIDATE_GEOM(obj.R > 0, "для круга: радиус R должен быть > 0");
                 }
-                else if constexpr(std::is_same_v<T, CSquare>) {
+                else if constexpr(std::is_same_v<std::decay_t<decltype(obj)>, CSquare>) {
                     while (i < n) {
                         SAFE_IDX(result, i);
                         bool found = false;
