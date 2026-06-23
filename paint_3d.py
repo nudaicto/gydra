@@ -47,7 +47,7 @@ P_masked = np.where(obstacle_mask, np.nan, P_t)
 k_masked = np.where(obstacle_mask, np.nan, k_t)
 
 # ========== ПОДГОТОВКА СТРЕЛОК ==========
-step = 3  # шаг разрежения
+step = 3
 
 arrow_mask = (alpha_t == 1)
 
@@ -74,7 +74,7 @@ speed_quiv = speed_sparse[i_sparse, j_sparse, l_sparse]
 fig = make_subplots(
     rows=1, cols=4,
     specs=[[{'is_3d': True}, {'is_3d': True}, {'is_3d': True}, {'is_3d': True}]],
-    subplot_titles=('Поле напора h + векторы скорости', 'Модуль скорости |v|', 'Давление P', 'Проницаемость k')
+    subplot_titles=('Поле напора h', 'Модуль скорости |v|', 'Давление P', 'Проницаемость k')
 )
 
 # --- График 1: Напор + стрелки скорости ---
@@ -87,12 +87,20 @@ fig.add_trace(
         surface_count=10,
         colorscale='balance',
         opacity=0.4,
-        name='h'
+        name='h',
+        colorbar=dict(
+            title='h, м',
+            x=0.125,  # центр первого subplot
+            y=0.05,   # внизу
+            len=0.15,
+            orientation='h',  # горизонтальная
+            thickness=15
+        )
     ),
     row=1, col=1
 )
 
-# Добавляем стрелки - ИСПРАВЛЕННАЯ ВЕРСИЯ
+# Добавляем стрелки
 if len(X_quiv) > 0:
     fig.add_trace(
         go.Cone(
@@ -104,18 +112,20 @@ if len(X_quiv) > 0:
             w=vz_quiv.flatten(),
             colorscale='Reds',
             sizemode='absolute',
-            sizeref=2.0,  # увеличен размер стрелок
-            anchor='tail',  # хвост в точке
+            sizeref=2.0,
+            anchor='tail',
             showscale=True,
             cmin=0,
             cmax=np.max(speed_quiv) if len(speed_quiv) > 0 else 1.0,
             colorbar=dict(
                 title='|v|, м/с',
-                x=0.25,
-                y=0.5,
-                len=0.6
+                x=0.125,
+                y=0.0,  # чуть ниже первого colorbar
+                len=0.15,
+                orientation='h',
+                thickness=15
             ),
-            opacity=1.0,  # полностью непрозрачные
+            opacity=1.0,
             name='v',
             hovertemplate='x: %{x:.2f}<br>y: %{y:.2f}<br>z: %{z:.2f}<br>|v|: %{norm:.4f} м/с<extra></extra>'
         ),
@@ -132,7 +142,15 @@ fig.add_trace(
         surface_count=10,
         colorscale='plasma',
         opacity=0.6,
-        name='|v|'
+        name='|v|',
+        colorbar=dict(
+            title='|v|, м/с',
+            x=0.375,  # центр второго subplot
+            y=0.05,
+            len=0.15,
+            orientation='h',
+            thickness=15
+        )
     ),
     row=1, col=2
 )
@@ -147,7 +165,15 @@ fig.add_trace(
         surface_count=10,
         colorscale='viridis',
         opacity=0.6,
-        name='P'
+        name='P',
+        colorbar=dict(
+            title='P, Па',
+            x=0.625,  # центр третьего subplot
+            y=0.05,
+            len=0.15,
+            orientation='h',
+            thickness=15
+        )
     ),
     row=1, col=3
 )
@@ -162,7 +188,15 @@ fig.add_trace(
         surface_count=10,
         colorscale='hot',
         opacity=0.7,
-        name='k'
+        name='k',
+        colorbar=dict(
+            title='k',
+            x=0.875,  # центр четвертого subplot
+            y=0.05,
+            len=0.15,
+            orientation='h',
+            thickness=15
+        )
     ),
     row=1, col=4
 )
@@ -170,31 +204,35 @@ fig.add_trace(
 fig.update_layout(
     title='3D визуализация результатов моделирования',
     width=2400,
-    height=700,
+    height=800,  # увеличил высоту для colorbar внизу
     scene=dict(
         xaxis_title='X',
         yaxis_title='Y',
         zaxis_title='Z',
         aspectmode='data',
-        bgcolor='white'
+        bgcolor='white',
+        domain=dict(x=[0, 0.25], y=[0.15, 1])  # оставляем место внизу
     ),
     scene2=dict(
         xaxis_title='X',
         yaxis_title='Y',
         zaxis_title='Z',
-        aspectmode='data'
+        aspectmode='data',
+        domain=dict(x=[0.25, 0.5], y=[0.15, 1])
     ),
     scene3=dict(
         xaxis_title='X',
         yaxis_title='Y',
         zaxis_title='Z',
-        aspectmode='data'
+        aspectmode='data',
+        domain=dict(x=[0.5, 0.75], y=[0.15, 1])
     ),
     scene4=dict(
         xaxis_title='X',
         yaxis_title='Y',
         zaxis_title='Z',
-        aspectmode='data'
+        aspectmode='data',
+        domain=dict(x=[0.75, 1], y=[0.15, 1])
     )
 )
 
