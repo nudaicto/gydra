@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
+#include "configuration_3d.h"
 
 class CPoint3D {
 public:
@@ -22,10 +23,47 @@ public:
                  board("no"), type("no"), value(0), pressure(0) {}
 };
 
+// === ФУНКЦИЯ f_k ДЛЯ ОПРЕДЕЛЕНИЯ ПРОНИЦАЕМОСТИ ===
+double f_k(double x, double y, double z, 
+           const std::vector<std::variant<CSphere3D, CBox3D>>& primitives, 
+           double k_default) {
+    for (const auto& prim : primitives) {
+        std::visit([&](auto& obj) {
+            using T = std::decay_t<decltype(obj)>;
+            if constexpr (std::is_same_v<T, CSphere3D>) {
+                double dist = std::sqrt((x-obj.x0)*(x-obj.x0) + 
+                                       (y-obj.y0)*(y-obj.y0) + 
+                                       (z-obj.z0)*(z-obj.z0));
+                if (dist <= obj.R) {
+                    k_default = obj.k_value;
+                }
+            }
+            else if constexpr (std::is_same_v<T, CBox3D>) {
+                if (x >= obj.x1 && x <= obj.x2 && 
+                    y >= obj.y1 && y <= obj.y2 && 
+                    z >= obj.z1 && z <= obj.z2) {
+                    k_default = obj.k_value;
+                }
+            }
+        }, prim);
+    }
+    return k_default;
+}
+
 int main() {
-    // Параметры сетки
-    double x_max = 10.0, y_max = 10.0, z_max = 10.0;
-    double dx = 1.0, dy = 1.0, dz = 1.0;
+    // === ЧТЕНИЕ КОНФИГУРАЦИИ ИЗ ФАЙЛА ===
+    Config3D config;
+    
+    if (!read_configuration_3d("configuration_3d.txt", config)) {
+        std::cerr << "Используются параметры по умолчанию" << std::endl;
+    }
+
+    double x_max = config.x_max;
+    double y_max = config.y_max;
+    double z_max = config.z_max;
+    double dx = config.dx;
+    double dy = config.dy;
+    double dz = config.dz;
 
     std::vector<double> x, y, z;
     for(double val = 0; val <= x_max + 1e-9; val += dx) x.push_back(val);
@@ -55,39 +93,42 @@ int main() {
                 if (is_boundary) {
                     pole[i][j][k].alpha = 4;
                     
-                    // === НАСТРОЙКА ГРАНИЧНЫХ УСЛОВИЙ ===
-                    // z=0 и z=z_max — непроницаемые (zero_gradient)
-                    // Остальные — фиксированный напор (fixed)
-                    
-                    if (i == 0) {
-                        pole[i][j][k].board = "z_back";
-                        pole[i][j][k].type = "zero_gradient";  // НЕПРОНИЦАЕМАЯ
-                    }
-                    else if (i == Nz-1) {
-                        pole[i][j][k].board = "z_front";
-                        pole[i][j][k].type = "zero_gradient";  // НЕПРОНИЦАЕМАЯ
-                    }
-                    else if (k == 0) {
+                    // === ГРАНИЧНЫЕ УСЛОВИЯ ИЗ КОНФИГУРАЦИИ ===
+                    if (k == 0) {
                         pole[i][j][k].board = "x_left";
-                        pole[i][j][k].type = "fixed";
-                        pole[i][j][k].value = 10.0;
+                        pole[i][j][k].type = config.bc_x_left.type;
+                        pole[i][j][k].value = config.bc_x_left.value;
                     }
                     else if (k == Nx-1) {
                         pole[i][j][k].board = "x_right";
-                        pole[i][j][k].type = "fixed";
-                        pole[i][j][k].value = 0.0;
+                        pole[i][j][k].type = config.bc_x_right.type;
+                        pole[i][j][k].value = config.bc_x_right.value;
                     }
                     else if (j == 0) {
                         pole[i][j][k].board = "y_bottom";
-                        pole[i][j][k].type = "zero_gradient";  // НЕПРОНИЦАЕМАЯ
+                        pole[i][j][k].type = config.bc_y_bottom.type;
+                        pole[i][j][k].value = config.bc_y_bottom.value;
                     }
                     else if (j == Ny-1) {
                         pole[i][j][k].board = "y_top";
-                        pole[i][j][k].type = "zero_gradient";  // НЕПРОНИЦАЕМАЯ
+                        pole[i][j][k].type = config.bc_y_top.type;
+                        pole[i][j][k].value = config.bc_y_top.value;
+                    }
+                    else if (i == 0) {
+                        pole[i][j][k].board = "z_back";
+                        pole[i][j][k].type = config.bc_z_back.type;
+                        pole[i][j][k].value = config.bc_z_back.value;
+                    }
+                    else if (i == Nz-1) {
+                        pole[i][j][k].board = "z_front";
+                        pole[i][j][k].type = config.bc_z_front.type;
+                        pole[i][j][k].value = config.bc_z_front.value;
                     }
                 } else {
                     pole[i][j][k].alpha = 1;
-                    pole[i][j][k].k = 1.0;
+                    
+                    // === ОПРЕДЕЛЕНИЕ ПРОНИЦАЕМОСТИ k ===
+                    pole[i][j][k].k = f_k(x[k], y[j], z[i], config.k_primitives, 1.0);
                 }
             }
         }
@@ -112,7 +153,6 @@ int main() {
                         pole[i][j][k].h = pole[i][j][k].value;
                     }
                     else if (pole[i][j][k].type == "zero_gradient") {
-                        // Определяем, сколько границ пересекается
                         bool on_x_left   = (k == 0);
                         bool on_x_right  = (k == Nx-1);
                         bool on_y_bottom = (j == 0);
@@ -125,7 +165,6 @@ int main() {
                         if (on_y_bottom || on_y_top) boundary_count++;
                         if (on_z_back || on_z_front) boundary_count++;
                         
-                        // Вершина (3 границы) - усредняем 3 соседа
                         if (boundary_count == 3) {
                             double sum = 0.0;
                             int count = 0;
@@ -137,7 +176,6 @@ int main() {
                             if (on_z_front)    { sum += pole[i-1][j][k].h; count++; }
                             pole[i][j][k].h = sum / count;
                         }
-                        // Ребро (2 границы) - усредняем 2 соседа
                         else if (boundary_count == 2) {
                             double sum = 0.0;
                             int count = 0;
@@ -149,7 +187,6 @@ int main() {
                             if (on_z_front)    { sum += pole[i-1][j][k].h; count++; }
                             pole[i][j][k].h = sum / count;
                         }
-                        // Грань (1 граница) - копируем из соседней точки
                         else if (boundary_count == 1) {
                             if (on_x_left)      pole[i][j][k].h = pole[i][j][k+1].h;
                             else if (on_x_right)  pole[i][j][k].h = pole[i][j][k-1].h;
@@ -265,7 +302,7 @@ int main() {
         std::cerr << "Ошибка открытия файла!" << std::endl;
         return 1;
     }
-    file << "z,y,x,h,alpha,board,type,vz,vy,vx,pressure\n";
+    file << "z,y,x,h,alpha,board,type,vz,vy,vx,pressure,k\n";
     file << std::fixed << std::setprecision(5);
 
     for (int i = 0; i < Nz; i++) {
@@ -281,7 +318,8 @@ int main() {
                      << pole[i][j][k].vz << ","
                      << pole[i][j][k].vy << ","
                      << pole[i][j][k].vx << ","
-                     << pole[i][j][k].pressure << "\n";
+                     << pole[i][j][k].pressure << ","
+                     << pole[i][j][k].k << "\n";
             }
         }
     }

@@ -1,0 +1,31 @@
+# Граничные условия
+x_left
+u type fixed value 10.0
+
+x_right
+u type fixed value 0.0
+
+y_bottom
+u type zero_gradient
+
+y_top
+u type zero_gradient
+
+z_back
+u type zero_gradient
+
+z_front
+u type zero_gradient
+
+# Области с разной проницаемостью
+f_k
+form type sphere x0 5.0 y0 5.0 z0 5.0 R 2.0 k 5.0
+form type box x1 7.0 y1 7.0 z1 7.0 x2 9.0 y2 9.0 z2 9.0 k 0.1
+
+# Параметры сетки
+x_max 10.0
+y_max 10.0
+z_max 10.0
+dx 0.5
+dy 0.5
+dz 0.5
