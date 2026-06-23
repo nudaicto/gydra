@@ -531,14 +531,6 @@ std::cout << "Внутренних водных узлов: " << count << std::e
 
 //сам расчет
 
-
-
-// ω = 1.0 — обычный метод Зейделя
-// ω > 1.0 — верхняя релаксация (ускорение сходимости)
-double omega = 1.2;
-
-std::cout << "Используется метод SOR с параметром релаксации ω = " << omega << std::endl;
-
 for (int iter = 0; iter < max_iter; iter++) {
     e0 = 0;
 
@@ -565,7 +557,6 @@ for (int iter = 0; iter < max_iter; iter++) {
     }
 
     // ЭТАП 2: Считаем только внутренние точки (alpha==1, board=="no")
-    // МЕТОД SOR: h_new = (1-ω)*h_old + ω*h_calculated
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
             h_old = pole[i][j].h;
@@ -612,14 +603,7 @@ for (int iter = 0; iter < max_iter; iter++) {
                 double denominator = k_left / dx2 + k_right / dx2 + k_down / dy2 + k_up / dy2;
 
                 if (denominator > 1e-15) {
-                    // Вычисляем значение по классической формуле
-                    double h_calculated = numerator / denominator;
-                    
-                    // === ПРИМЕНЯЕМ РЕЛАКСАЦИЮ ===
-                    // h_new = (1 - ω) * h_old + ω * h_calculated
-                    double h_new = (1.0 - omega) * h_old + omega * h_calculated;
-                    
-                    pole[i][j].h = h_new;
+                    pole[i][j].h = numerator / denominator;
                     
                     // Защита от численного взрыва или потери точности
                     if (std::isnan(pole[i][j].h) || std::isinf(pole[i][j].h)) {
@@ -629,7 +613,8 @@ for (int iter = 0; iter < max_iter; iter++) {
                     }
                     e0 = std::max(e0, std::abs(h_old - pole[i][j].h));
                 } else {
-                    // Если знаменатель близок к нулю, ячейка изолирована. Оставляем h без изменений.
+                    // Если знаменатель близок к нулю, ячейка изолирована. Оставляем h без изменений, но логируем предупреждение.
+                    // (Это не фатально, но полезно знать)
                 }
             }
         }
